@@ -1,0 +1,167 @@
+	
+/* Définition de variables et de constantes */
+#define MAX 100
+byte cardNum = 69;
+byte loginAttempts = 0;
+int accountBalance = 10000;
+
+bool PINOK = false;
+bool cardLock = false;
+bool transactionOK = false;
+
+mtype = {transactionOk, transactionError, transactionUnsuccessful, PINvalid, PINinvalid, verifyPIN, requestWithdrawal, withdrawAmount, requestLogon, cardLocked};
+
+
+
+
+
+proctype client(chan cashDispenser_client) {
+
+Request_Logon:
+
+if
+
+  ::atomic{cashDispenser_client?eval(cardNum),requestLogon,0,PINvalid->PINOK=true;printf("\nRight PIN entered\n");goto selectOperation}
+
+  ::atomic{cashDispenser_client?eval(cardNum),requestLogon,0,PINinvalid->PINOK=false;
+   printf("You entered an invalid PIN");
+   goto Request_Logon}
+
+  ::atomic{cashDispenser_client?eval(cardNum),requestLogon,0,cardLocked->PINOK=false;
+   printf("Card is Locked");
+   cardLock=true;goto CardLocked}
+
+fi;
+
+selectOperation: //TODO
+CardLocked: //TODO
+}
+
+
+
+
+
+proctype cashDispenser(chan client_cashDispenser; chan cashDispenser_atmNetwork; chan atmNetwork_cashDispenser; chan cashDispenser_client) {
+
+/*A  process  of  dispenser  dispense  cash  only  when  the  PIN and the amount entered is valid*/
+
+byte PIN;
+
+start:
+
+atomic{client_cashDispenser?cardNum,requestLogon,0,PIN->cashDispenser_atmNetwork!cardNum,requestLogon,0,PIN;}
+
+
+if
+   :: atomic{ atmNetwork_cashDispenser?eval(cardNum),requestLogon,0,PINvalid->cashDispenser_client!cardNum,requestLogon,0,PINvalid;goto Cash_Withdrawal;}
+
+   :: atomic{ atmNetwork_cashDispenser?eval(cardNum),requestLogon,0,PINinvalid-> cashDispenser_client!cardNum,requestLogon,0,PINinvalid;goto start;}
+
+   :: atomic{ atmNetwork_cashDispenser?eval(cardNum),requestLogon,0,cardLocked-> cashDispenser_client!cardNum,requestLogon,0,cardLocked;cardLock=true;goto start;}
+
+fi;
+
+Cash_Withdrawal: //TODO
+
+}
+
+
+
+
+
+/*The  process of ATM  network refers tothe  network of the ATM owner bankwhichchecksbank details of the client and then  sendsthe  details  to  the host  bank network  for  PIN verification and other account details verification. */
+proctype atmNetwork(chan cashDispenser_atmNetwork; chan atmNetwork_hostAtmServer; chan hostAtmServer_atmNetwork; chan atmNetwork_cashDispenser) {
+
+byte PIN;
+Check_Bank_Details:
+
+if
+  
+   ::cashDispenser_atmNetwork?eval(cardNum),requestLogon,0,PIN->
+   if
+     
+     ::(loginAttempts<3)->atmNetwork_hostAtmServer!cardNum,verifyPIN,0,PIN->
+            if
+	
+                ::atomic{hostAtmServer_atmNetwork?eval(cardNum),verifyPIN,0,PINvalid->atmNetwork_cashDispenser!cardNum,requestLogon,0,PINvalid;goto Cash_Withdrawal;}
+
+                ::atomic{hostAtmServer_atmNetwork?eval(cardNum),verifyPIN,0,PINinvalid->atmNetwork_cashDispenser!cardNum,requestLogon,0,PINinvalid;loginAttempts=loginAttempts+1;goto Check_Bank_Details} 
+
+            fi;
+    
+      ::else -> atomic{atmNetwork_cashDispenser!cardNum,requestLogon,cardLocked->loginAttempts=loginAttempts+1;goto Check_Bank_Details}
+   fi;
+fi;
+
+Cash_Withdrawal: //TODO
+}
+
+
+
+
+
+/* The process of host ATM network refers to the network of client  host  bank  which  verifies  the  PIN  and  other  account details. */
+proctype hostAtmServer(chan atmNetwork_hostAtmServer; chan hostAtmServer_atmNetwork) {
+
+byte PIN;
+server_start:
+
+atomic{atmNetwork_hostAtmServer?eval(cardNum),verifyPIN,0,PIN};
+
+if
+// TODO: Declare const for the valid PIN instead of 100
+::(PIN == 100)->hostAtmServer_atmNetwork!cardNum,verifyPIN,0,PINvalid->PINOK=true;goto Cash_Withdrawal;
+::else->hostAtmServer_atmNetwork!cardNum,verifyPIN,0,PINinvalid->PINOK=false;goto server_start;
+fi;
+
+Cash_Withdrawal:
+/*
+atmNetwork_hostAtmServer?cardNum,requestWithdrawal,withdrawAmount,PIN->
+
+if
+
+    ::atomic{(withdrawAmount<=accountBalance)->
+
+    if
+
+        ::atomic{hostAtmServer_atmNetwork!cardNum,requestWithdrawal,withdrawAmount,transactionOk->accountBalance=accountBalance-withdrawAmount;transactionOK=true;goto server_start;}
+
+        ::atomic{hostAtmServer_atmNetwork!cardNum,requestWithdrawal,withdrawAmount,transactionError->transactionOK=false;goto server_start;}
+
+   fi;}
+
+
+    ::atomic{(withdrawAmount>accountBalance)->hostAtmServer_atmNetwork!cardNum,requestWithdrawal,withdrawAmount,transactionUnsuccessful->transactionOK=false;goto server_start;}
+
+fi;*/
+
+}
+
+
+
+
+
+init {
+            chan cashDispenser_client=[MAX] of {byte,mtype,mtype,byte}; 
+
+             chan client_cashDispenser=[MAX] of {byte,mtype,byte,mtype}; 
+
+            chan cashDispenser_atmNetwork=[MAX] of {byte,mtype,mtype,byte}; 
+
+            chan atmNetwork_cashDispenser=[MAX] of {byte,mtype,mtype,byte}; 
+
+            chan atmNetwork_hostAtmServer=[MAX] of {byte,mtype,mtype,byte}; 
+
+            chan hostAtmServer_atmNetwork=[MAX] of {byte,mtype,mtype,mtype}; 
+
+            run client(cashDispenser_client);
+            run cashDispenser(client_cashDispenser, cashDispenser_atmNetwork, atmNetwork_cashDispenser, cashDispenser_client);
+            run atmNetwork(cashDispenser_atmNetwork, atmNetwork_hostAtmServer, hostAtmServer_atmNetwork, atmNetwork_cashDispenser);
+            run hostAtmServer(atmNetwork_hostAtmServer, hostAtmServer_atmNetwork);
+            // client_cashDispenser!cardNum, requestLogon, 0, 100;      
+            client_cashDispenser!cardNum, requestLogon, 0, 12; 
+            client_cashDispenser!cardNum, requestLogon, 0, 12;      
+            client_cashDispenser!cardNum, requestLogon, 0, 100;                 
+
+}
+ /* specification de propriétés */
