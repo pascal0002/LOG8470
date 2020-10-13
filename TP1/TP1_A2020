@@ -102,9 +102,9 @@ byte accountBalanceInfo;
 Cash_Withdrawal: 
 
 if
-atomic{client_cashDispenser?cardNum,requestWithdrawal,withdrawAmount, PIN->cashDispenser_atmNetwork!cardNum,requestWithdrawal,withdrawAmount, PIN}; 
+	:: atomic{client_cashDispenser?cardNum,requestWithdrawal,withdrawAmount, PIN->cashDispenser_atmNetwork!cardNum,requestWithdrawal,withdrawAmount, PIN}; 
 
-atomic{client_cashDispenser?cardNum,requestBalance,0, PIN->cashDispenser_atmNetwork!cardNum,requestBalance,0, PIN}; 
+	:: atomic{client_cashDispenser?cardNum,requestBalance,0, PIN->cashDispenser_atmNetwork!cardNum,requestBalance,0, PIN}; 
 fi;
 
 if
@@ -153,9 +153,9 @@ byte accountBalanceInfo;
 Cash_Withdrawal: //TODO
 
 if
-atomic{cashDispenser_atmNetwork?cardNum,requestWithdrawal,withdrawAmount, PIN->atmNetwork_hostAtmServer!cardNum,requestWithdrawal,withdrawAmount, PIN}; 
+	:: atomic{cashDispenser_atmNetwork?cardNum,requestWithdrawal,withdrawAmount, PIN->atmNetwork_hostAtmServer!cardNum,requestWithdrawal,withdrawAmount, PIN}; 
 
-atomic{cashDispenser_atmNetwork?cardNum,requestBalance,0, PIN->atmNetwork_hostAtmServer!cardNum,requestBalance,0, PIN}; 
+	:: atomic{cashDispenser_atmNetwork?cardNum,requestBalance,0, PIN->atmNetwork_hostAtmServer!cardNum,requestBalance,0, PIN}; 
 fi;
 
 if
