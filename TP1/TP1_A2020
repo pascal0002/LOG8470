@@ -13,8 +13,6 @@ mtype = {transactionOk, transactionError, transactionUnsuccessful, PINvalid, PIN
 
 
 
-
-
 proctype client(chan cashDispenser_client) {
 
 Request_Logon:
@@ -49,8 +47,11 @@ byte PIN;
 
 start:
 
-atomic{client_cashDispenser?cardNum,requestLogon,0,PIN->cashDispenser_atmNetwork!cardNum,requestLogon,0,PIN;}
-
+atomic{client_cashDispenser?cardNum,requestLogon,0,PIN->cashDispenser_atmNetwork!cardNum,requestLogon,0,PIN;}	
+if 
+::(cardLock)->printf("Card is locked!");goto start;
+::else->skip;
+fi;
 
 if
    :: atomic{ atmNetwork_cashDispenser?eval(cardNum),requestLogon,0,PINvalid->cashDispenser_client!cardNum,requestLogon,0,PINvalid;goto Cash_Withdrawal;}
@@ -89,7 +90,7 @@ if
 
             fi;
     
-      ::else -> atomic{atmNetwork_cashDispenser!cardNum,requestLogon,cardLocked->loginAttempts=loginAttempts+1;goto Check_Bank_Details}
+      ::else -> atomic{atmNetwork_cashDispenser!cardNum,requestLogon,0,cardLocked->loginAttempts=loginAttempts+1;goto Check_Bank_Details}
    fi;
 fi;
 
@@ -154,14 +155,19 @@ init {
 
             chan hostAtmServer_atmNetwork=[MAX] of {byte,mtype,mtype,mtype}; 
 
+            client_cashDispenser!cardNum, requestLogon, 0, 12; 
+            client_cashDispenser!cardNum, requestLogon, 0, 13; 
+            client_cashDispenser!cardNum, requestLogon, 0, 14;
+            client_cashDispenser!cardNum, requestLogon, 0, 15;          
+            client_cashDispenser!cardNum, requestLogon, 0, 100; 
+
             run client(cashDispenser_client);
             run cashDispenser(client_cashDispenser, cashDispenser_atmNetwork, atmNetwork_cashDispenser, cashDispenser_client);
             run atmNetwork(cashDispenser_atmNetwork, atmNetwork_hostAtmServer, hostAtmServer_atmNetwork, atmNetwork_cashDispenser);
             run hostAtmServer(atmNetwork_hostAtmServer, hostAtmServer_atmNetwork);
             // client_cashDispenser!cardNum, requestLogon, 0, 100;      
-            client_cashDispenser!cardNum, requestLogon, 0, 12; 
-            client_cashDispenser!cardNum, requestLogon, 0, 12;      
-            client_cashDispenser!cardNum, requestLogon, 0, 100;                 
+                            
 
 }
  /* specification de propriétés */
+ltl p1 {loginAttempts > 3 -> cardLock};
