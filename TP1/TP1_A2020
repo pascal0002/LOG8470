@@ -58,7 +58,7 @@ if
 
    :: atomic{ atmNetwork_cashDispenser?eval(cardNum),requestLogon,0,PINinvalid-> cashDispenser_client!cardNum,requestLogon,0,PINinvalid;goto start;}
 
-   :: atomic{ atmNetwork_cashDispenser?eval(cardNum),requestLogon,0,cardLocked-> cashDispenser_client!cardNum,requestLogon,0,cardLocked;cardLock=true;goto start;}
+   :: atomic{ atmNetwork_cashDispenser?eval(cardNum),requestLogon,0,cardLocked-> cashDispenser_client!cardNum,requestLogon,0,cardLocked;goto start;}
 
 fi;
 
@@ -90,7 +90,7 @@ if
 
             fi;
     
-      ::else -> atomic{atmNetwork_cashDispenser!cardNum,requestLogon,0,cardLocked->loginAttempts=loginAttempts+1;goto Check_Bank_Details}
+      ::else -> atomic{atmNetwork_cashDispenser!cardNum,requestLogon,0,cardLocked->cardLock=true;loginAttempts=loginAttempts+1;goto Check_Bank_Details}
    fi;
 fi;
 
@@ -170,4 +170,5 @@ init {
 
 }
  /* specification de propriétés */
-ltl p1 {loginAttempts > 3 -> cardLock};
+ltl p1 {[](loginAttempts > 3 -> cardLock)}; //safety
+//ltl p2 {[] !cardLock};
