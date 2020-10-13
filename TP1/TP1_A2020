@@ -11,7 +11,7 @@ bool PINOK = false;
 bool cardLock = false;
 bool transactionOK = false;
 
-mtype = {transactionOk, transactionError, transactionUnsuccessful, PINvalid, PINinvalid, verifyPIN, requestWithdrawal, requestLogon, cardLocked};
+mtype = {transactionOk, transactionError, transactionUnsuccessful, PINvalid, PINinvalid, verifyPIN, requestWithdrawal, requestBalance, requestLogon, cardLocked};
 
 
 
@@ -46,9 +46,11 @@ client_cashDispenser!cardNum,requestWithdrawal, moneyToWithdraw,100;
 client_cashDispenser!cardNum,requestWithdrawal, moneyToWithdraw,100; 
 client_cashDispenser!cardNum,requestWithdrawal, moneyToWithdraw,100; 
 	moneyToWithdraw = 25;
-	client_cashDispenser!cardNum,requestWithdrawal, moneyToWithdraw,100; 
+	client_cashDispenser!cardNum,requestWithdrawal, moneyToWithdraw,100;
+client_cashDispenser!cardNum,requestBalance, 0,100;
 
 byte withdrawAmount;
+byte accountBalance;
 
 selectOperation:
 
@@ -58,6 +60,8 @@ if
 ::atomic{cashDispenser_client?cardNum,requestWithdrawal,withdrawAmount,transactionError->printf("Transaction error\n");}
 
 ::atomic{cashDispenser_client?cardNum,requestWithdrawal,withdrawAmount,transactionUnsuccessful->printf("Transaction unsucessful\n");}
+
+::atomic{cashDispenser_client?cardNum,requestBalance,accountBalance,transactionOk->printf("Account Balance: %d", accountBalance);}
 fi;
 
 goto selectOperation; 
@@ -93,10 +97,15 @@ if
 fi;
 
 byte withdrawAmount;
+byte accountBalance;
 
 Cash_Withdrawal: 
 
+if
 atomic{client_cashDispenser?cardNum,requestWithdrawal,withdrawAmount, PIN->cashDispenser_atmNetwork!cardNum,requestWithdrawal,withdrawAmount, PIN}; 
+
+atomic{client_cashDispenser?cardNum,requestBalance,0, PIN->cashDispenser_atmNetwork!cardNum,requestBalance,0, PIN}; 
+fi;
 
 if
 ::atomic{atmNetwork_cashDispenser?cardNum,requestWithdrawal,withdrawAmount,transactionOk->cashDispenser_client!cardNum,requestWithdrawal,withdrawAmount,transactionOk;}
@@ -104,6 +113,8 @@ if
 ::atomic{atmNetwork_cashDispenser?cardNum,requestWithdrawal,withdrawAmount,transactionError->cashDispenser_client!cardNum,requestWithdrawal,withdrawAmount,transactionError;}
 
 ::atomic{atmNetwork_cashDispenser?cardNum,requestWithdrawal,withdrawAmount,transactionUnsuccessful->cashDispenser_client!cardNum,requestWithdrawal,withdrawAmount,transactionUnsuccessful;}
+
+::atomic{atmNetwork_cashDispenser?cardNum,requestBalance,accountBalance,transactionOk->cashDispenser_client!cardNum,requestBalance,accountBalance,transactionOk;}
 fi;
 goto Cash_Withdrawal;
 }
@@ -137,10 +148,15 @@ if
 fi;
 
 byte withdrawAmount;
+byte accountBalance;
 
 Cash_Withdrawal: //TODO
 
+if
 atomic{cashDispenser_atmNetwork?cardNum,requestWithdrawal,withdrawAmount, PIN->atmNetwork_hostAtmServer!cardNum,requestWithdrawal,withdrawAmount, PIN}; 
+
+atomic{cashDispenser_atmNetwork?cardNum,requestBalance,0, PIN->atmNetwork_hostAtmServer!cardNum,requestBalance,0, PIN}; 
+fi;
 
 if
 ::atomic{hostAtmServer_atmNetwork?cardNum,requestWithdrawal,withdrawAmount,transactionOk->atmNetwork_cashDispenser!cardNum,requestWithdrawal,withdrawAmount,transactionOk;}
@@ -148,6 +164,8 @@ if
 ::atomic{hostAtmServer_atmNetwork?cardNum,requestWithdrawal,withdrawAmount,transactionError->atmNetwork_cashDispenser!cardNum,requestWithdrawal,withdrawAmount,transactionError;}
 
 ::atomic{hostAtmServer_atmNetwork?cardNum,requestWithdrawal,withdrawAmount,transactionUnsuccessful->atmNetwork_cashDispenser!cardNum,requestWithdrawal,withdrawAmount,transactionUnsuccessful;}
+
+::atomic{hostAtmServer_atmNetwork?cardNum,requestBalance,accountBalance,transactionOk->atmNetwork_cashDispenser!cardNum,requestBalance,accountBalance,transactionOk;}
 fi;
 goto Cash_Withdrawal;
 }
@@ -174,25 +192,29 @@ byte withdrawAmount;
 
 Cash_Withdrawal:
 
-atmNetwork_hostAtmServer?cardNum,requestWithdrawal,withdrawAmount,PIN->
-
 if
-
-    ::atomic{(withdrawAmount<=accountBalance)->
-
-    if
-
-        ::(withdrawAmount > 0)->atomic{hostAtmServer_atmNetwork!cardNum,requestWithdrawal,withdrawAmount,transactionOk->accountBalance=accountBalance-withdrawAmount;transactionOK=true;goto Cash_Withdrawal;}
-
-        ::else->atomic{hostAtmServer_atmNetwork!cardNum,requestWithdrawal,withdrawAmount,transactionError->transactionOK=false;goto Cash_Withdrawal;}
-
-   fi;}
+	::atomic{atmNetwork_hostAtmServer?cardNum,requestWithdrawal,withdrawAmount,PIN->
 
 
-    ::atomic{(withdrawAmount>accountBalance)->hostAtmServer_atmNetwork!cardNum,requestWithdrawal,withdrawAmount,transactionUnsuccessful->transactionOK=false;goto Cash_Withdrawal;}
+	if
 
+		::atomic{(withdrawAmount<=accountBalance)->
+
+		if
+
+			::(withdrawAmount > 0)->atomic{hostAtmServer_atmNetwork!cardNum,requestWithdrawal,withdrawAmount,transactionOk->accountBalance=accountBalance-withdrawAmount;transactionOK=true;goto Cash_Withdrawal;}
+
+			::else->atomic{hostAtmServer_atmNetwork!cardNum,requestWithdrawal,withdrawAmount,transactionError->transactionOK=false;goto Cash_Withdrawal;}
+
+	   fi;}
+
+
+		::atomic{(withdrawAmount>accountBalance)->hostAtmServer_atmNetwork!cardNum,requestWithdrawal,withdrawAmount,transactionUnsuccessful->transactionOK=false;goto Cash_Withdrawal;}
+
+	fi;}
+	
+	::atomic{atmNetwork_hostAtmServer?cardNum,requestBalance,0,PIN->atomic{hostAtmServer_atmNetwork!cardNum,requestBalance,accountBalance,transactionOk->transactionOK=true;goto Cash_Withdrawal;}}
 fi;
-
 }
 
 
