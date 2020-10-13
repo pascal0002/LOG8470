@@ -50,7 +50,7 @@ client_cashDispenser!cardNum,requestWithdrawal, moneyToWithdraw,100;
 client_cashDispenser!cardNum,requestBalance, 0,100;
 
 byte withdrawAmount;
-byte accountBalance;
+byte accountBalanceInfo;
 
 selectOperation:
 
@@ -61,7 +61,7 @@ if
 
 ::atomic{cashDispenser_client?cardNum,requestWithdrawal,withdrawAmount,transactionUnsuccessful->printf("Transaction unsucessful\n");}
 
-::atomic{cashDispenser_client?cardNum,requestBalance,accountBalance,transactionOk->printf("Account Balance: %d", accountBalance);}
+::atomic{cashDispenser_client?cardNum,requestBalance,accountBalanceInfo,transactionOk->printf("Account Balance: %d", accountBalanceInfo);}
 fi;
 
 goto selectOperation; 
@@ -97,7 +97,7 @@ if
 fi;
 
 byte withdrawAmount;
-byte accountBalance;
+byte accountBalanceInfo;
 
 Cash_Withdrawal: 
 
@@ -114,7 +114,7 @@ if
 
 ::atomic{atmNetwork_cashDispenser?cardNum,requestWithdrawal,withdrawAmount,transactionUnsuccessful->cashDispenser_client!cardNum,requestWithdrawal,withdrawAmount,transactionUnsuccessful;}
 
-::atomic{atmNetwork_cashDispenser?cardNum,requestBalance,accountBalance,transactionOk->cashDispenser_client!cardNum,requestBalance,accountBalance,transactionOk;}
+::atomic{atmNetwork_cashDispenser?cardNum,requestBalance,accountBalanceInfo,transactionOk->cashDispenser_client!cardNum,requestBalance,accountBalanceInfo,transactionOk;}
 fi;
 goto Cash_Withdrawal;
 }
@@ -148,7 +148,7 @@ if
 fi;
 
 byte withdrawAmount;
-byte accountBalance;
+byte accountBalanceInfo;
 
 Cash_Withdrawal: //TODO
 
@@ -165,7 +165,7 @@ if
 
 ::atomic{hostAtmServer_atmNetwork?cardNum,requestWithdrawal,withdrawAmount,transactionUnsuccessful->atmNetwork_cashDispenser!cardNum,requestWithdrawal,withdrawAmount,transactionUnsuccessful;}
 
-::atomic{hostAtmServer_atmNetwork?cardNum,requestBalance,accountBalance,transactionOk->atmNetwork_cashDispenser!cardNum,requestBalance,accountBalance,transactionOk;}
+::atomic{hostAtmServer_atmNetwork?cardNum,requestBalance,accountBalanceInfo,transactionOk->atmNetwork_cashDispenser!cardNum,requestBalance,accountBalanceInfo,transactionOk;}
 fi;
 goto Cash_Withdrawal;
 }
