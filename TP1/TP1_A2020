@@ -1,10 +1,11 @@
 	
 /* Définition de variables et de constantes */
 #define MAX 100
+#define MAX_VALUE_BYTE 255
 byte cardNum = 69;
 byte loginAttempts = 0;
 int accountBalance = 250;
-byte moneyToWithdraw = accountBalance + 1;
+byte moneyToWithdraw = MAX_VALUE_BYTE;
 
 bool PINOK = false;
 bool cardLock = false;
@@ -224,7 +225,7 @@ init {
 
 // 5
 //ltl p1 {[](loginAttempts > 3 -> cardLock)}; //safety
-//ltl p2 {!transactionOK U (PINOK && (moneyToWithdraw < accountBalance))};
+ltl p2 {!transactionOK U (PINOK && (moneyToWithdraw < accountBalance))}; //liveness
 //ltl p3 {<>transactionOK};
 
 //6
