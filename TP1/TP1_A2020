@@ -45,8 +45,9 @@ moneyToWithdraw = 100;
 client_cashDispenser!cardNum,requestWithdrawal, moneyToWithdraw,100; 
 client_cashDispenser!cardNum,requestWithdrawal, moneyToWithdraw,100; 
 client_cashDispenser!cardNum,requestWithdrawal, moneyToWithdraw,100; 
-	moneyToWithdraw = 25;
-	client_cashDispenser!cardNum,requestWithdrawal, moneyToWithdraw,100;
+moneyToWithdraw = 25;
+client_cashDispenser!cardNum,requestWithdrawal, moneyToWithdraw,100;
+
 client_cashDispenser!cardNum,requestBalance, 0,100;
 
 byte withdrawAmount;
@@ -61,7 +62,7 @@ if
 
 ::atomic{cashDispenser_client?cardNum,requestWithdrawal,withdrawAmount,transactionUnsuccessful->printf("Transaction unsucessful\n");}
 
-::atomic{cashDispenser_client?cardNum,requestBalance,accountBalanceInfo,transactionOk->printf("Account Balance: %d", accountBalanceInfo);}
+::atomic{cashDispenser_client?cardNum,requestBalance,accountBalanceInfo,transactionOk->printf("Account Balance: %d \n", accountBalanceInfo);}
 fi;
 
 goto selectOperation; 
@@ -107,14 +108,15 @@ if
 	:: atomic{client_cashDispenser?cardNum,requestBalance,0, PIN->cashDispenser_atmNetwork!cardNum,requestBalance,0, PIN}; 
 fi;
 
+// We wait for the response of the atm network here
 if
-::atomic{atmNetwork_cashDispenser?cardNum,requestWithdrawal,withdrawAmount,transactionOk->cashDispenser_client!cardNum,requestWithdrawal,withdrawAmount,transactionOk;}
+	::atomic{atmNetwork_cashDispenser?cardNum,requestWithdrawal,withdrawAmount,transactionOk->cashDispenser_client!cardNum,requestWithdrawal,withdrawAmount,transactionOk;}
 
-::atomic{atmNetwork_cashDispenser?cardNum,requestWithdrawal,withdrawAmount,transactionError->cashDispenser_client!cardNum,requestWithdrawal,withdrawAmount,transactionError;}
+	::atomic{atmNetwork_cashDispenser?cardNum,requestWithdrawal,withdrawAmount,transactionError->cashDispenser_client!cardNum,requestWithdrawal,withdrawAmount,transactionError;}
 
-::atomic{atmNetwork_cashDispenser?cardNum,requestWithdrawal,withdrawAmount,transactionUnsuccessful->cashDispenser_client!cardNum,requestWithdrawal,withdrawAmount,transactionUnsuccessful;}
+	::atomic{atmNetwork_cashDispenser?cardNum,requestWithdrawal,withdrawAmount,transactionUnsuccessful->cashDispenser_client!cardNum,requestWithdrawal,withdrawAmount,transactionUnsuccessful;}
 
-::atomic{atmNetwork_cashDispenser?cardNum,requestBalance,accountBalanceInfo,transactionOk->cashDispenser_client!cardNum,requestBalance,accountBalanceInfo,transactionOk;}
+	::atomic{atmNetwork_cashDispenser?cardNum,requestBalance,accountBalanceInfo,transactionOk->cashDispenser_client!cardNum,requestBalance,accountBalanceInfo,transactionOk;}
 fi;
 goto Cash_Withdrawal;
 }
