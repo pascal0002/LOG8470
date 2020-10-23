@@ -7,12 +7,19 @@ byte loginAttempts = 0;
 int accountBalance = 1250;
 int moneyToWithdraw = MAX_VALUE_INT;
 
+#define withdrawType 0
+#define depositType 1
+#define reimbursementType 2
+byte transactionType[MAX];
+int transactionAmount[MAX];
+byte transactionArrSize = 0;
+
 bool PINOK = false;
 bool cardLock = false;
 bool transactionOK = false;
 
 mtype = {transactionOk, transactionError, transactionUnsuccessful, PINvalid, PINinvalid, verifyPIN,
-	requestWithdrawal, requestBalance, requestLogon, cardLocked, makeDeposit};
+	requestWithdrawal, requestBalance, requestLogon, cardLocked, makeDeposit, ejectCard};
 
 
 
@@ -55,6 +62,8 @@ client_cashDispenser!cardNum, makeDeposit, 0,1000;
 client_cashDispenser!cardNum,makeDeposit, 0, 20;
 
 client_cashDispenser!cardNum,requestBalance, 0, 0;
+client_cashDispenser!cardNum,requestBalance, 0, 0;
+client_cashDispenser!cardNum,ejectCard, 0, 0;
 
 int withdrawAmount;
 int accountBalanceInfo;
@@ -72,6 +81,22 @@ if
 ::atomic{cashDispenser_client?cardNum,requestBalance, transactionOk, accountBalanceInfo->printf("Account Balance: %d $\n", accountBalanceInfo);}
 
 ::atomic{cashDispenser_client?cardNum,makeDeposit, transactionOk, depositAmount->printf("Deposited %d $ to the account\n", depositAmount);}
+
+::atomic{cashDispenser_client?cardNum,ejectCard, 0, 0->
+		
+	printf("Card ejected\n"); 
+	byte i;
+	printf("This is your receipt:\n"); 
+	for (i: 0 .. transactionArrSize-1) {
+		if
+		::(transactionType[i] == depositType)->printf("	Deposit: %d$\n",  transactionAmount[i]); 
+		::(transactionType[i] == withdrawType)->printf("	Withdraw: %d$\n",  transactionAmount[i]); 
+		::else->skip;
+		fi;
+	}
+	printf("Balance: %d$\n", accountBalance); 
+
+	goto Request_Logon;}
 
 fi;
 
@@ -113,13 +138,17 @@ int depositAmount;
 
 Handle_Request: 
 
-// Forward the message to the dispenser
+// Forward the message to the atmNetwork
 if
 	:: atomic{client_cashDispenser?cardNum,requestWithdrawal, 0, withdrawAmount->cashDispenser_atmNetwork!cardNum,requestWithdrawal, 0, withdrawAmount}; 
 
 	:: atomic{client_cashDispenser?cardNum,requestBalance,0, 0->cashDispenser_atmNetwork!cardNum,requestBalance,0, 0}; 
 
 	:: atomic{client_cashDispenser?cardNum,makeDeposit, 0, depositAmount->cashDispenser_atmNetwork!cardNum,makeDeposit, 0, depositAmount};
+
+	:: atomic{client_cashDispenser?cardNum,ejectCard, 0, 0->cashDispenser_atmNetwork!cardNum,ejectCard, 0, 0};
+
+	
 fi;
 
 //  Forward the response to the client
@@ -133,6 +162,9 @@ if
 	::atomic{atmNetwork_cashDispenser?cardNum,requestBalance,transactionOk,accountBalanceInfo->cashDispenser_client!cardNum,requestBalance,transactionOk,accountBalanceInfo;}
 
 	::atomic{atmNetwork_cashDispenser?cardNum,makeDeposit, transactionOk, depositAmount->cashDispenser_client!cardNum,makeDeposit, transactionOk, depositAmount;}
+	
+	:: atomic{atmNetwork_cashDispenser?cardNum,ejectCard, 0, 0->cashDispenser_client!cardNum,ejectCard, 0, 0; goto start};
+
 fi;
 goto Handle_Request;
 }
@@ -169,7 +201,7 @@ int withdrawAmount;
 int accountBalanceInfo;
 int depositAmount;
 
-Handle_Request: //TODO
+Handle_Request: //TODO 
 
 // Forward request to host
 if
@@ -178,6 +210,8 @@ if
 	:: atomic{cashDispenser_atmNetwork?cardNum,requestBalance,0, 0->atmNetwork_hostAtmServer!cardNum,requestBalance,0, 0}; 
 
 	:: atomic{cashDispenser_atmNetwork?cardNum,makeDeposit, 0, depositAmount->atmNetwork_hostAtmServer!cardNum,makeDeposit, 0, depositAmount};
+	
+	:: atomic{cashDispenser_atmNetwork?cardNum,ejectCard, 0, 0->atmNetwork_hostAtmServer!cardNum,ejectCard, 0, 0};
 
 fi;
 
@@ -192,6 +226,8 @@ if
 	::atomic{hostAtmServer_atmNetwork?cardNum,requestBalance,transactionOk,accountBalanceInfo->atmNetwork_cashDispenser!cardNum,requestBalance,transactionOk,accountBalanceInfo;}
 
 	::atomic{hostAtmServer_atmNetwork?cardNum,makeDeposit, transactionOk,depositAmount->atmNetwork_cashDispenser!cardNum,makeDeposit, transactionOk,depositAmount;}
+
+	:: atomic{hostAtmServer_atmNetwork?cardNum,ejectCard, 0, 0->atmNetwork_cashDispenser!cardNum,ejectCard, 0, 0; goto Check_Bank_Details};
 
 fi;
 goto Handle_Request;
@@ -218,6 +254,7 @@ fi;
 int withdrawAmount;
 int depositAmount;
 
+// TODO Handle case where depositAmount is smaller than 0
 Cash_Withdrawal:
 
 if
@@ -230,7 +267,15 @@ if
 
 		if
 
-			::(withdrawAmount > 0)->atomic{hostAtmServer_atmNetwork!cardNum,requestWithdrawal,transactionOk,withdrawAmount->accountBalance=accountBalance-withdrawAmount;transactionOK=true;goto Cash_Withdrawal;}
+			::(withdrawAmount > 0)->atomic{hostAtmServer_atmNetwork!cardNum,requestWithdrawal,transactionOk,withdrawAmount->
+				accountBalance=accountBalance-withdrawAmount;
+				transactionOK=true;
+				
+				transactionType[transactionArrSize] = withdrawType;
+				transactionAmount[transactionArrSize] = withdrawAmount;
+				transactionArrSize = transactionArrSize + 1;				
+
+				goto Cash_Withdrawal;}
 
 			::else->atomic{hostAtmServer_atmNetwork!cardNum,requestWithdrawal,transactionError,withdrawAmount->transactionOK=false;goto Cash_Withdrawal;}
 
@@ -248,7 +293,17 @@ if
 	:: atomic{atmNetwork_hostAtmServer?cardNum,makeDeposit, 0, depositAmount->
 		accountBalance = accountBalance + depositAmount;
 		hostAtmServer_atmNetwork!cardNum,makeDeposit, transactionOk, depositAmount;
+
+		transactionType[transactionArrSize] = depositType;
+		transactionAmount[transactionArrSize] = depositAmount;
+		transactionArrSize = transactionArrSize + 1;
+
 		goto Cash_Withdrawal};	
+
+	:: atomic{atmNetwork_hostAtmServer?cardNum,ejectCard, 0, 0->
+		
+		hostAtmServer_atmNetwork!cardNum,ejectCard, 0, 0;
+		goto server_start;};
 
 fi;
 }
