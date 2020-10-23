@@ -25,12 +25,7 @@ mtype = {transactionOk, transactionError, transactionUnsuccessful, PINvalid, PIN
 
 proctype client(chan cashDispenser_client; chan client_cashDispenser) {
 
-// Should this be in init() or here?
-atomic{client_cashDispenser!cardNum, requestLogon, 0, 12;}
-atomic{client_cashDispenser!cardNum, requestLogon, 0, 13; }
-//client_cashDispenser!cardNum, requestLogon, 0, 14;
-//client_cashDispenser!cardNum, requestLogon, 0, 15;
-atomic{client_cashDispenser!cardNum, requestLogon, 0, 100; }
+
 
 Request_Logon:
 
@@ -48,22 +43,7 @@ if
 
 fi;
 
-// Should this be in init() or here?
-moneyToWithdraw = 100;
-client_cashDispenser!cardNum,requestWithdrawal, 0, moneyToWithdraw; 
-client_cashDispenser!cardNum,requestWithdrawal, 0, moneyToWithdraw; 
-client_cashDispenser!cardNum,requestWithdrawal, 0, moneyToWithdraw; 
-moneyToWithdraw = 25;
-client_cashDispenser!cardNum,requestWithdrawal, 0, moneyToWithdraw;
 
-client_cashDispenser!cardNum,requestBalance, 0, 0;
-
-client_cashDispenser!cardNum, makeDeposit, 0,1000;
-client_cashDispenser!cardNum,makeDeposit, 0, 20;
-
-client_cashDispenser!cardNum,requestBalance, 0, 0;
-client_cashDispenser!cardNum,requestBalance, 0, 0;
-client_cashDispenser!cardNum,ejectCard, 0, 0;
 
 int withdrawAmount;
 int accountBalanceInfo;
@@ -95,7 +75,7 @@ if
 		fi;
 	}
 	printf("Balance: %d$\n", accountBalance); 
-
+	transactionArrSize = 0;
 	goto Request_Logon;}
 
 fi;
@@ -331,6 +311,39 @@ init {
             run cashDispenser(client_cashDispenser, cashDispenser_atmNetwork, atmNetwork_cashDispenser, cashDispenser_client);
             run atmNetwork(cashDispenser_atmNetwork, atmNetwork_hostAtmServer, hostAtmServer_atmNetwork, atmNetwork_cashDispenser);
             run hostAtmServer(atmNetwork_hostAtmServer, hostAtmServer_atmNetwork);
+
+
+	// Authentificate user
+	atomic{client_cashDispenser!cardNum, requestLogon, 0, 12;}
+	atomic{client_cashDispenser!cardNum, requestLogon, 0, 13; }
+	//client_cashDispenser!cardNum, requestLogon, 0, 14;
+	//client_cashDispenser!cardNum, requestLogon, 0, 15;
+	atomic{client_cashDispenser!cardNum, requestLogon, 0, 100; }
+	
+	// Withdraw
+	moneyToWithdraw = 100;
+	client_cashDispenser!cardNum,requestWithdrawal, 0, moneyToWithdraw; 
+	client_cashDispenser!cardNum,requestWithdrawal, 0, moneyToWithdraw; 
+	client_cashDispenser!cardNum,requestWithdrawal, 0, moneyToWithdraw; 
+	moneyToWithdraw = 25;
+	client_cashDispenser!cardNum,requestWithdrawal, 0, moneyToWithdraw;
+
+	// Deposits + get balance
+	client_cashDispenser!cardNum,requestBalance, 0, 0;
+
+	client_cashDispenser!cardNum, makeDeposit, 0,1000;
+	client_cashDispenser!cardNum,makeDeposit, 0, 20;
+
+	client_cashDispenser!cardNum,requestBalance, 0, 0;
+	client_cashDispenser!cardNum,requestBalance, 0, 0;
+
+	// Eject card
+	client_cashDispenser!cardNum,ejectCard, 0, 0;
+	
+	// Re authenticate user
+	atomic{client_cashDispenser!cardNum, requestLogon, 0, 100; }
+	client_cashDispenser!cardNum, makeDeposit, 0,1000;
+	client_cashDispenser!cardNum,ejectCard, 0, 0;
                             
 
 }

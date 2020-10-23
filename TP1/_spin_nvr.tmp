@@ -1,0 +1,10 @@
+never p2 {    /* !((! (transactionOK)) U ((PINOK) && ((moneyToWithdraw<accountBalance)))) */
+accept_init:
+T0_init:
+	do
+	:: (! (((PINOK) && ((moneyToWithdraw<accountBalance))))) -> goto T0_init
+	:: atomic { (! ((! (transactionOK))) && ! (((PINOK) && ((moneyToWithdraw<accountBalance))))) -> assert(!(! ((! (transactionOK))) && ! (((PINOK) && ((moneyToWithdraw<accountBalance)))))) }
+	od;
+accept_all:
+	skip
+}
