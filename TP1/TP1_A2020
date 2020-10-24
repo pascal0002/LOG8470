@@ -384,4 +384,8 @@ init {
 ltl p2 {!transactionOK U (PINOK && (moneyToWithdraw < accountBalance))}; //liveness
 //ltl p3 {<>transactionOK};
 
+ltl a {PINvalid -> [] makeDeposit};
+ltl b {PINvalid -> (requestWithdrawal || requestBalance || makeDeposit ) U ejectCard };
+ltl c {makeDeposit -> <> ( cancelDeposit || !cancelDeposit)};
+
 //6
