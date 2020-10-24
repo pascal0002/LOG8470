@@ -19,7 +19,7 @@ bool cardLock = false;
 bool transactionOK = false;
 
 mtype = {transactionOk, transactionError, transactionUnsuccessful, PINvalid, PINinvalid, verifyPIN,
-	requestWithdrawal, requestBalance, requestLogon, cardLocked, makeDeposit, ejectCard};
+	requestWithdrawal, requestBalance, requestLogon, cardLocked, makeDeposit, ejectCard, cancelDeposit};
 
 
 
@@ -125,6 +125,8 @@ if
 	:: atomic{client_cashDispenser?cardNum,requestBalance,0, 0->cashDispenser_atmNetwork!cardNum,requestBalance,0, 0}; 
 
 	:: atomic{client_cashDispenser?cardNum,makeDeposit, 0, depositAmount->cashDispenser_atmNetwork!cardNum,makeDeposit, 0, depositAmount};
+	
+	:: atomic{client_cashDispenser?cardNum,cancelDeposit, 0, 0->cashDispenser_atmNetwork!cardNum,cancelDeposit, 0, 0};
 
 	:: atomic{client_cashDispenser?cardNum,ejectCard, 0, 0->cashDispenser_atmNetwork!cardNum,ejectCard, 0, 0};
 
@@ -190,6 +192,8 @@ if
 	:: atomic{cashDispenser_atmNetwork?cardNum,requestBalance,0, 0->atmNetwork_hostAtmServer!cardNum,requestBalance,0, 0}; 
 
 	:: atomic{cashDispenser_atmNetwork?cardNum,makeDeposit, 0, depositAmount->atmNetwork_hostAtmServer!cardNum,makeDeposit, 0, depositAmount};
+	
+	:: atomic{cashDispenser_atmNetwork?cardNum,cancelDeposit, 0, 0->atmNetwork_hostAtmServer!cardNum,cancelDeposit, 0, 0};
 	
 	:: atomic{cashDispenser_atmNetwork?cardNum,ejectCard, 0, 0->atmNetwork_hostAtmServer!cardNum,ejectCard, 0, 0};
 
@@ -279,6 +283,32 @@ if
 		transactionArrSize = transactionArrSize + 1;
 
 		goto Cash_Withdrawal};	
+		
+	:: atomic{atmNetwork_hostAtmServer?cardNum,cancelDeposit, 0, 0->
+		if
+
+			::atomic{(depositAmount<=accountBalance)->
+
+			if
+
+				::(depositAmount > 0)->atomic{hostAtmServer_atmNetwork!cardNum,requestWithdrawal,transactionOk,depositAmount->
+					accountBalance=accountBalance-depositAmount;
+					transactionOK=true;
+					
+					transactionType[transactionArrSize] = withdrawType;
+					transactionAmount[transactionArrSize] = depositAmount;
+					transactionArrSize = transactionArrSize + 1;				
+
+					goto Cash_Withdrawal;}
+
+				::else->atomic{hostAtmServer_atmNetwork!cardNum,requestWithdrawal,transactionError,depositAmount->transactionOK=false;goto Cash_Withdrawal;}
+
+		   fi;}
+
+
+			::atomic{(depositAmount>accountBalance)->hostAtmServer_atmNetwork!cardNum,requestWithdrawal,transactionUnsuccessful,depositAmount->transactionOK=false;goto Cash_Withdrawal;}
+
+		fi;}
 
 	:: atomic{atmNetwork_hostAtmServer?cardNum,ejectCard, 0, 0->
 		
