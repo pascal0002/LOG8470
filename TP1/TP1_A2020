@@ -10,9 +10,11 @@ int moneyToWithdraw = MAX_VALUE_INT;
 #define withdrawType 0
 #define depositType 1
 #define reimbursementType 2
+
 byte transactionType[MAX];
 int transactionAmount[MAX];
 byte transactionArrSize = 0;
+int lastDeposit = 0;
 
 bool PINOK = false;
 bool cardLock = false;
@@ -71,6 +73,7 @@ if
 		if
 		::(transactionType[i] == depositType)->printf("	Deposit: %d$\n",  transactionAmount[i]); 
 		::(transactionType[i] == withdrawType)->printf("	Withdraw: %d$\n",  transactionAmount[i]); 
+		::(transactionType[i] == reimbursementType)->printf("	Reimbursement: %d$\n",  transactionAmount[i]); 
 		::else->skip;
 		fi;
 	}
@@ -295,7 +298,7 @@ if
 					accountBalance=accountBalance-depositAmount;
 					transactionOK=true;
 					
-					transactionType[transactionArrSize] = withdrawType;
+					transactionType[transactionArrSize] = reimbursementType;
 					transactionAmount[transactionArrSize] = depositAmount;
 					transactionArrSize = transactionArrSize + 1;				
 
@@ -342,13 +345,13 @@ init {
             run atmNetwork(cashDispenser_atmNetwork, atmNetwork_hostAtmServer, hostAtmServer_atmNetwork, atmNetwork_cashDispenser);
             run hostAtmServer(atmNetwork_hostAtmServer, hostAtmServer_atmNetwork);
 
-
+	/*
 	// Authentificate user
-	atomic{client_cashDispenser!cardNum, requestLogon, 0, 12;}
-	atomic{client_cashDispenser!cardNum, requestLogon, 0, 13; }
+	client_cashDispenser!cardNum, requestLogon, 0, 12;
+	client_cashDispenser!cardNum, requestLogon, 0, 13; 
 	//client_cashDispenser!cardNum, requestLogon, 0, 14;
 	//client_cashDispenser!cardNum, requestLogon, 0, 15;
-	atomic{client_cashDispenser!cardNum, requestLogon, 0, 100; }
+	client_cashDispenser!cardNum, requestLogon, 0, 100; 
 	
 	// Withdraw
 	moneyToWithdraw = 100;
@@ -373,8 +376,23 @@ init {
 	// Re authenticate user
 	atomic{client_cashDispenser!cardNum, requestLogon, 0, 100; }
 	client_cashDispenser!cardNum, makeDeposit, 0,1000;
+	client_cashDispenser!cardNum,ejectCard, 0, 0;*/
+	
+	client_cashDispenser!cardNum, requestLogon, 0, 100; 
+	
+	 // Deposit
+	client_cashDispenser!cardNum,makeDeposit, 0, 20;
+
+	client_cashDispenser!cardNum,makeDeposit, 0, 40;
+
+	// Reimbursement 
+                client_cashDispenser!cardNum,cancelDeposit, 0, 0;   
+
+	// Check balance
+	client_cashDispenser!cardNum,requestBalance, 0, 0;      
+	
+	// eject card
 	client_cashDispenser!cardNum,ejectCard, 0, 0;
-                            
 
 }
  /* specification de propriétés */
@@ -384,8 +402,8 @@ init {
 ltl p2 {!transactionOK U (PINOK && (moneyToWithdraw < accountBalance))}; //liveness
 //ltl p3 {<>transactionOK};
 
-ltl a {PINvalid -> [] makeDeposit};
-ltl b {PINvalid -> (requestWithdrawal || requestBalance || makeDeposit ) U ejectCard };
-ltl c {makeDeposit -> <> ( cancelDeposit || !cancelDeposit)};
+//ltl a {PINvalid -> [] makeDeposit};
+//ltl b {PINvalid -> (requestWithdrawal || requestBalance || makeDeposit ) U ejectCard };
+//ltl c {makeDeposit -> <> ( cancelDeposit || !cancelDeposit)};
 
 //6
