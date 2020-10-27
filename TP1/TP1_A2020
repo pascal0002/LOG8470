@@ -19,6 +19,12 @@ byte transactionArrSize = 0;
 
 bool test = true;
 bool canDeposit = false;
+bool ltlRequestCancel = false;
+bool ltlRequestDeposit = false;
+bool ltlDepositSuccessful = false;
+bool ltlPrintReceipt = false;
+bool ltlEjectCard = false;
+bool ltlCanceledDeposit = false;
 bool PINOK = false;
 bool cardLock = false;
 bool withdrawTransactionOK = false;
@@ -55,19 +61,20 @@ int depositAmount;
 Wait_For_Response:
 
 if
-::atomic{cashDispenser_client?cardNum,requestWithdrawal,transactionOk,withdrawAmount->printf("Transaction OK\n");}
+::atomic{cashDispenser_client?cardNum,requestWithdrawal,transactionOk,withdrawAmount->printf("Transaction OK\n"); ltlCanceledDeposit = true;}
 
-::atomic{cashDispenser_client?cardNum,requestWithdrawal,transactionError,withdrawAmount->printf("Transaction error\n");}
+::atomic{cashDispenser_client?cardNum,requestWithdrawal,transactionError,withdrawAmount->printf("Transaction error\n");ltlCanceledDeposit = true;}
 
-::atomic{cashDispenser_client?cardNum,requestWithdrawal,transactionUnsuccessful,withdrawAmount->printf("Transaction unsucessful\n");}
+::atomic{cashDispenser_client?cardNum,requestWithdrawal,transactionUnsuccessful,withdrawAmount->printf("Transaction unsucessful\n");ltlCanceledDeposit = true;}
 
 ::atomic{cashDispenser_client?cardNum,requestBalance, transactionOk, accountBalanceInfo->printf("Account Balance: %d $\n", accountBalanceInfo);}
 
-::atomic{cashDispenser_client?cardNum,makeDeposit, transactionOk, depositAmount->printf("Deposited %d $ to the account\n", depositAmount);}
+::atomic{cashDispenser_client?cardNum,makeDeposit, transactionOk, depositAmount->printf("Deposited %d $ to the account\n", depositAmount); ltlDepositSuccessful = true;}
 
 ::atomic{cashDispenser_client?cardNum,ejectCard, 0, 0->
 		
-	printf("Card ejected\n"); 
+	printf("Card ejected\n");
+	ltlEjectCard = true;
 	byte i;
 	printf("This is your receipt:\n"); 
 	for (i: 0 .. transactionArrSize-1) {
@@ -79,6 +86,7 @@ if
 		fi;
 	}
 	printf("Balance: %d$\n", accountBalance); 
+	ltlPrintReceipt = true;
 	transactionArrSize = 0;
 	
 	// Reset values
@@ -86,11 +94,16 @@ if
 	moneyToWithdraw = MAX_VALUE_INT;
 	canDeposit = false;
 	withdrawTransactionOK = false;
+	ltlPrintReceipt = false;
+	ltlEjectCard = false;
+	
 
 	goto Request_Logon;}
 
 fi;
 // resetValues
+	ltlCanceledDeposit = false;
+	ltlDepositSuccessful = false;
 goto Wait_For_Response; 
 
 CardLocked: // Just exit
@@ -133,9 +146,9 @@ if
 
 	:: atomic{client_cashDispenser?cardNum,requestBalance,0, 0->cashDispenser_atmNetwork!cardNum,requestBalance,0, 0}; 
 
-	:: atomic{client_cashDispenser?cardNum,makeDeposit, 0, depositAmount->cashDispenser_atmNetwork!cardNum,makeDeposit, 0, depositAmount};
+	:: atomic{client_cashDispenser?cardNum,makeDeposit, 0, depositAmount->cashDispenser_atmNetwork!cardNum,makeDeposit, 0, depositAmount; ltlRequestDeposit = true;};
 	
-	:: atomic{client_cashDispenser?cardNum,cancelDeposit, 0, 0->cashDispenser_atmNetwork!cardNum,cancelDeposit, 0, 0};
+	:: atomic{client_cashDispenser?cardNum,cancelDeposit, 0, 0->cashDispenser_atmNetwork!cardNum,cancelDeposit, 0, 0; ltlCanceledDeposit = true;};
 
 	:: atomic{client_cashDispenser?cardNum,ejectCard, 0, 0->cashDispenser_atmNetwork!cardNum,ejectCard, 0, 0};
 
@@ -144,15 +157,15 @@ fi;
 
 //  Forward the response to the client
 if
-	::atomic{atmNetwork_cashDispenser?cardNum,requestWithdrawal, transactionOk,withdrawAmount->cashDispenser_client!cardNum,requestWithdrawal,transactionOk,withdrawAmount;}
+	::atomic{atmNetwork_cashDispenser?cardNum,requestWithdrawal, transactionOk,withdrawAmount->cashDispenser_client!cardNum,requestWithdrawal,transactionOk,withdrawAmount; ltlCanceledDeposit = false;}
 
-	::atomic{atmNetwork_cashDispenser?cardNum,requestWithdrawal,transactionError,withdrawAmount->cashDispenser_client!cardNum,requestWithdrawal,transactionError,withdrawAmount;}
+	::atomic{atmNetwork_cashDispenser?cardNum,requestWithdrawal,transactionError,withdrawAmount->cashDispenser_client!cardNum,requestWithdrawal,transactionError,withdrawAmount;ltlCanceledDeposit = false;}
 
-	::atomic{atmNetwork_cashDispenser?cardNum,requestWithdrawal,transactionUnsuccessful,withdrawAmount->cashDispenser_client!cardNum,requestWithdrawal,transactionUnsuccessful,withdrawAmount;}
+	::atomic{atmNetwork_cashDispenser?cardNum,requestWithdrawal,transactionUnsuccessful,withdrawAmount->cashDispenser_client!cardNum,requestWithdrawal,transactionUnsuccessful,withdrawAmount;ltlCanceledDeposit = false;}
 
 	::atomic{atmNetwork_cashDispenser?cardNum,requestBalance,transactionOk,accountBalanceInfo->cashDispenser_client!cardNum,requestBalance,transactionOk,accountBalanceInfo;}
 
-	::atomic{atmNetwork_cashDispenser?cardNum,makeDeposit, transactionOk, depositAmount->cashDispenser_client!cardNum,makeDeposit, transactionOk, depositAmount;}
+	::atomic{atmNetwork_cashDispenser?cardNum,makeDeposit, transactionOk, depositAmount->cashDispenser_client!cardNum,makeDeposit, transactionOk, depositAmount;ltlRequestDeposit = false;}
 	
 	:: atomic{atmNetwork_cashDispenser?cardNum,ejectCard, 0, 0->cashDispenser_client!cardNum,ejectCard, 0, 0; goto start};
 
@@ -405,13 +418,10 @@ init {
 // 5
 //ltl p5a {[](loginAttempts > 3 -> cardLock)}; //safety
 //ltl p5b {!withdrawTransactionOK U (PINOK && (moneyToWithdraw < accountBalance))}; //liveness
-ltl p5c {<>withdrawTransactionOK}; //liveness - pas realisable pour notre sys. (ex: 3 loginattemps echoue)
+//ltl p5c {<>withdrawTransactionOK}; //liveness - pas realisable pour notre sys. (ex: 3 loginattemps echoue)
 
 // 6
-// [](PINOK && RequestDeposit -> <>DepositSuccessful)
-//ltl p6a {(PINvalid -> []canDeposit)};
-//ltl p6a {[](PINOK -> canDeposit)};
-
-//ltl p6b {PINvalid -> (requestWithdrawal || requestBalance || makeDeposit ) U ejectCard };
-//ltl p6c {makeDeposit -> <> ( cancelDeposit || !cancelDeposit)};
+ltl p6a {[](PINOK && ltlRequestDeposit-> <>ltlDepositSuccessful)};
+//ltl p6b {[](!ltlPrintReceipt U ltlEjectCard)};
+//ltl p6c {[](ltlDepositSuccessful && <>ltlRequestCancel -> <>ltlCanceledDeposit)};
 
