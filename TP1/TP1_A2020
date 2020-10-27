@@ -34,7 +34,7 @@ Request_Logon:
 
 if
 
-  ::atomic{cashDispenser_client?eval(cardNum),requestLogon,PINvalid,0->PINOK=true;printf("Right PIN entered\n");}
+  ::atomic{cashDispenser_client?eval(cardNum),requestLogon,PINvalid,0->canDeposit=true;PINOK=true;printf("Right PIN entered\n");}
 
   ::atomic{cashDispenser_client?eval(cardNum),requestLogon,PINinvalid,0->PINOK=false;
    printf("You entered an invalid PIN\n");
@@ -52,7 +52,7 @@ int withdrawAmount;
 int accountBalanceInfo;
 int depositAmount;
 
-selectOperation:
+Wait_For_Response:
 
 if
 ::atomic{cashDispenser_client?cardNum,requestWithdrawal,transactionOk,withdrawAmount->printf("Transaction OK\n");}
@@ -90,8 +90,8 @@ if
 	goto Request_Logon;}
 
 fi;
-
-goto selectOperation; 
+// resetValues
+goto Wait_For_Response; 
 
 CardLocked: // Just exit
 }
@@ -340,10 +340,9 @@ init {
 
             chan hostAtmServer_atmNetwork=[MAX] of {int,mtype,mtype,int}; 
 	
-	
+	/*
 	// Authentificate user
 	client_cashDispenser!cardNum, requestLogon, 0, 12;
-	client_cashDispenser!cardNum, requestLogon, 0, 13; 
 	client_cashDispenser!cardNum, requestLogon, 0, 13; 
 	client_cashDispenser!cardNum, requestLogon, 0, 13; 
 
@@ -367,18 +366,16 @@ init {
 	client_cashDispenser!cardNum,requestBalance, 0, 0;
 
 	// Eject card
-	client_cashDispenser!cardNum,ejectCard, 0, 0;
+	client_cashDispenser!cardNum,ejectCard, 0, 0;*/
+
+
+
 	
 	// Re authenticate user
 	atomic{client_cashDispenser!cardNum, requestLogon, 0, 100; }
 	client_cashDispenser!cardNum, makeDeposit, 0,1000;
 	client_cashDispenser!cardNum,ejectCard, 0, 0;
 	
-
-	client_cashDispenser!cardNum, requestLogon, 0, 10; 
-	client_cashDispenser!cardNum, requestLogon, 0, 10; 
-	client_cashDispenser!cardNum, requestLogon, 0, 10; 
-	client_cashDispenser!cardNum, requestLogon, 0, 10; 
 	
 	 // Deposit
 	client_cashDispenser!cardNum,makeDeposit, 0, 20;
@@ -392,7 +389,7 @@ init {
 	client_cashDispenser!cardNum,requestBalance, 0, 0;      
 	
 	// eject card
-	client_cashDispenser!cardNum,ejectCard, 0, 0;
+	//client_cashDispenser!cardNum,ejectCard, 0, 0;
             
 
             run client(cashDispenser_client, client_cashDispenser);
@@ -408,11 +405,13 @@ init {
 // 5
 //ltl p5a {[](loginAttempts > 3 -> cardLock)}; //safety
 //ltl p5b {!withdrawTransactionOK U (PINOK && (moneyToWithdraw < accountBalance))}; //liveness
-//ltl p5c {<>withdrawTransactionOK}; //liveness - pas realisable pour notre sys. (ex: 3 loginattemps echoue)
+ltl p5c {<>withdrawTransactionOK}; //liveness - pas realisable pour notre sys. (ex: 3 loginattemps echoue)
 
 // 6
-ltl p6a {(PINOK -> []canDeposit)};
+// [](PINOK && RequestDeposit -> <>DepositSuccessful)
+//ltl p6a {(PINvalid -> []canDeposit)};
 //ltl p6a {[](PINOK -> canDeposit)};
+
 //ltl p6b {PINvalid -> (requestWithdrawal || requestBalance || makeDeposit ) U ejectCard };
 //ltl p6c {makeDeposit -> <> ( cancelDeposit || !cancelDeposit)};
 
