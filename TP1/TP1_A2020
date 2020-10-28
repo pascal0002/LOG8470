@@ -48,7 +48,7 @@ mtype = {transactionOk, transactionError, transactionUnsuccessful, PINvalid, PIN
 
 
 
-proctype client(chan cashDispenser_client; chan client_cashDispenser) {
+proctype client(chan cashDispenser_client; chan client_cashDispenser; chan cheque_cashDispenser_client; chan cheque_client_cashDispenser) {
 
 Request_Logon:
 
@@ -86,7 +86,7 @@ if
 
 ::atomic{cashDispenser_client?cardNum,makeDeposit, transactionOk, depositAmount->printf("Deposited %d $ to the account\n", depositAmount); ltlDepositSuccessful = true;}
 
-::atomic{cashDispenser_client?cardNum,depositCheque, transactionOk, cheque1->printf("Cheque deposited successfully, %d $ where added to the account\n", cheque1.amount);}
+::atomic{cheque_cashDispenser_client?cardNum,depositCheque, transactionOk, cheque1->printf("Cheque deposited successfully, %d $ where added to the account\n", cheque1.amount);}
 
 ::atomic{cashDispenser_client?cardNum,ejectCard, 0, 0->
 		
@@ -151,7 +151,7 @@ CardLocked: // Just exit
 
 
 
-proctype cashDispenser(chan client_cashDispenser; chan cashDispenser_atmNetwork; chan atmNetwork_cashDispenser; chan cashDispenser_client) {
+proctype cashDispenser(chan client_cashDispenser; chan cashDispenser_atmNetwork; chan atmNetwork_cashDispenser; chan cashDispenser_client; chan cheque_client_cashDispenser; chan cheque_cashDispenser_atmNetwork; chan cheque_atmNetwork_cashDispenser; chan cheque_cashDispenser_client) {
 	
 int PIN;
 
@@ -187,7 +187,7 @@ if
 
 	:: atomic{client_cashDispenser?cardNum,makeDeposit, 0, depositAmount->cashDispenser_atmNetwork!cardNum,makeDeposit, 0, depositAmount; ltlRequestDeposit = true;};
 	
-	:: atomic{client_cashDispenser?cardNum,depositCheque, 0, cheque1->cashDispenser_atmNetwork!cardNum,depositCheque, 0, cheque1;};
+	:: atomic{cheque_client_cashDispenser?cardNum,depositCheque, 0, cheque1->cashDispenser_atmNetwork!cardNum,depositCheque, 0, cheque1;};
 	
 	:: atomic{client_cashDispenser?cardNum,cancelDeposit, 0, 0->cashDispenser_atmNetwork!cardNum,cancelDeposit, 0, 0; ltlCanceledDeposit = true;};
 
@@ -208,7 +208,7 @@ if
 
 	::atomic{atmNetwork_cashDispenser?cardNum,makeDeposit, transactionOk, depositAmount->cashDispenser_client!cardNum,makeDeposit, transactionOk, depositAmount;}
 	
-	::atomic{atmNetwork_cashDispenser?cardNum,depositCheque, transactionOk, cheque1->cashDispenser_client!cardNum,depositCheque, transactionOk, cheque1;}
+	::atomic{cheque_atmNetwork_cashDispenser?cardNum,depositCheque, transactionOk, cheque1->cashDispenser_client!cardNum,depositCheque, transactionOk, cheque1;}
 	
 	:: atomic{atmNetwork_cashDispenser?cardNum,ejectCard, 0, 0->cashDispenser_client!cardNum,ejectCard, 0, 0; goto start};
 
@@ -220,7 +220,7 @@ goto Handle_Request;
 
 
 
-proctype atmNetwork(chan cashDispenser_atmNetwork; chan atmNetwork_hostAtmServer; chan hostAtmServer_atmNetwork; chan atmNetwork_cashDispenser) {
+proctype atmNetwork(chan cashDispenser_atmNetwork; chan atmNetwork_hostAtmServer; chan hostAtmServer_atmNetwork; chan atmNetwork_cashDispenser; chan cheque_cashDispenser_atmNetwork; chan cheque_atmNetwork_hostAtmServer; chan cheque_hostAtmServer_atmNetwork; chan cheque_atmNetwork_cashDispenser) {
 
 int PIN;
 Check_Bank_Details:
@@ -258,7 +258,7 @@ if
 
 	:: atomic{cashDispenser_atmNetwork?cardNum,makeDeposit, 0, depositAmount->atmNetwork_hostAtmServer!cardNum,makeDeposit, 0, depositAmount};
 	
-	:: atomic{cashDispenser_atmNetwork?cardNum,depositCheque, 0, cheque1->atmNetwork_hostAtmServer!cardNum,depositCheque, 0, cheque1};
+	:: atomic{cheque_cashDispenser_atmNetwork?cardNum,depositCheque, 0, cheque1->atmNetwork_hostAtmServer!cardNum,depositCheque, 0, cheque1};
 	
 	:: atomic{cashDispenser_atmNetwork?cardNum,cancelDeposit, 0, 0->atmNetwork_hostAtmServer!cardNum,cancelDeposit, 0, 0};
 	
@@ -278,7 +278,7 @@ if
 
 	::atomic{hostAtmServer_atmNetwork?cardNum,makeDeposit, transactionOk,depositAmount->atmNetwork_cashDispenser!cardNum,makeDeposit, transactionOk,depositAmount;}
 	
-	::atomic{hostAtmServer_atmNetwork?cardNum,depositCheque, transactionOk,cheque1->atmNetwork_cashDispenser!cardNum,depositCheque, transactionOk,cheque1;}
+	::atomic{cheque_hostAtmServer_atmNetwork?cardNum,depositCheque, transactionOk,cheque1->atmNetwork_cashDispenser!cardNum,depositCheque, transactionOk,cheque1;}
 
 	:: atomic{hostAtmServer_atmNetwork?cardNum,ejectCard, 0, 0->atmNetwork_cashDispenser!cardNum,ejectCard, 0, 0; goto Check_Bank_Details};
 
@@ -290,7 +290,7 @@ goto Handle_Request;
 
 
 
-proctype hostAtmServer(chan atmNetwork_hostAtmServer; chan hostAtmServer_atmNetwork) {
+proctype hostAtmServer(chan atmNetwork_hostAtmServer; chan hostAtmServer_atmNetwork; chan cheque_atmNetwork_hostAtmServer; chan cheque_hostAtmServer_atmNetwork) {
 
 int PIN;
 server_start:
@@ -377,10 +377,10 @@ if
 
 		fi;}
 		
-		:: atomic{atmNetwork_hostAtmServer?cardNum,depositCheque, 0, cheque1->
+		:: atomic{cheque_atmNetwork_hostAtmServer?cardNum,depositCheque, 0, cheque1->
 		
 		accountBalance = accountBalance + cheque1.amount;
-		hostAtmServer_atmNetwork!cardNum,depositCheque, transactionOk, cheque1.amount;
+		cheque_hostAtmServer_atmNetwork!cardNum,depositCheque, transactionOk, cheque1.amount;
 		
 		// Save transaction for receipt
 		transactionType[transactionArrSize] = chequeType;
@@ -413,6 +413,18 @@ init {
             chan atmNetwork_hostAtmServer=[MAX] of {int,mtype,mtype,int}; 
 
             chan hostAtmServer_atmNetwork=[MAX] of {int,mtype,mtype,int}; 
+
+            chan cheque_cashDispenser_client=[MAX] of {int,mtype,mtype,Cheque}; 
+
+             chan cheque_client_cashDispenser=[MAX] of {int,mtype,mtype,Cheque}; 
+
+            chan cheque_cashDispenser_atmNetwork=[MAX] of {int,mtype,mtype,Cheque}; 
+
+            chan cheque_atmNetwork_cashDispenser=[MAX] of {int,mtype,mtype,Cheque}; 
+
+            chan cheque_atmNetwork_hostAtmServer=[MAX] of {int,mtype,mtype,Cheque}; 
+
+            chan cheque_hostAtmServer_atmNetwork=[MAX] of {int,mtype,mtype,Cheque}; 
 	
 	
 	// Authentificate user
@@ -486,16 +498,16 @@ init {
         cheque1.month = 10;
         cheque1.day = 20;
         cheque1.amount = 200;
-	client_cashDispenser!cardNum, depositCheque, 0,cheque1;
+	cheque_client_cashDispenser!cardNum, depositCheque, 0,cheque1;
 	
 	client_cashDispenser!cardNum,requestBalance, 0, 0;
 	client_cashDispenser!cardNum,ejectCard, 0, 0;
 
 
-            run client(cashDispenser_client, client_cashDispenser);
-            run cashDispenser(client_cashDispenser, cashDispenser_atmNetwork, atmNetwork_cashDispenser, cashDispenser_client);
-            run atmNetwork(cashDispenser_atmNetwork, atmNetwork_hostAtmServer, hostAtmServer_atmNetwork, atmNetwork_cashDispenser);
-            run hostAtmServer(atmNetwork_hostAtmServer, hostAtmServer_atmNetwork);
+            run client(cashDispenser_client, client_cashDispenser,cheque_cashDispenser_client, cheque_client_cashDispenser);
+            run cashDispenser(client_cashDispenser, cashDispenser_atmNetwork, atmNetwork_cashDispenser, cashDispenser_client,cheque_client_cashDispenser, cheque_cashDispenser_atmNetwork, cheque_atmNetwork_cashDispenser, cheque_cashDispenser_client);
+            run atmNetwork(cashDispenser_atmNetwork, atmNetwork_hostAtmServer, hostAtmServer_atmNetwork, atmNetwork_cashDispenser,cheque_cashDispenser_atmNetwork, cheque_atmNetwork_hostAtmServer, cheque_hostAtmServer_atmNetwork, cheque_atmNetwork_cashDispenser);
+            run hostAtmServer(atmNetwork_hostAtmServer, hostAtmServer_atmNetwork,cheque_atmNetwork_hostAtmServer, cheque_hostAtmServer_atmNetwork);
 	
 }
  /* specification de propriétés */
