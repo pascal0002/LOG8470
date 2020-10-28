@@ -418,15 +418,12 @@ init {
 	client_cashDispenser!cardNum,ejectCard, 0, 0;
 	
 
-/*
 	// Pour prouver que la propriété 5 c) est fausse
 	// Wrong PIN entered more than 3 times - card locked
 	client_cashDispenser!cardNum, requestLogon, 0, 12;
 	client_cashDispenser!cardNum, requestLogon, 0, 13; 
 	client_cashDispenser!cardNum, requestLogon, 0, 12;
 	client_cashDispenser!cardNum, requestLogon, 0, 13; 
-*/
-	
 	
 
             run client(cashDispenser_client, client_cashDispenser);
@@ -438,15 +435,15 @@ init {
  /* specification de propriétés */
 
 // 5
-//ltl p5a {[](loginAttempts > 3 -> <>cardLock)}; //safety
+ltl p5a {[](loginAttempts > 3 -> <>cardLock)}; //safety
 
 //ltl p5b {[](PINOK && (moneyToWithdraw < accountBalance) -> <>ltlWithdrawSuccessful)}; //liveness fonctionne
 //ltl p5b {[](!ltlWithdrawSuccessful U (PINOK && (moneyToWithdraw < accountBalance)))}; //liveness garder pour l'analyse
 
-//ltl p5c {<>withdrawTransactionOK}; //liveness - pas realisable pour notre sys. (ex: 3 loginattemps echoue)
+//ltl p5c {[]<>withdrawTransactionOK}; //liveness - pas realisable pour notre sys. (ex: 3 loginattemps echoue)
 
 // 6
-//ltl p6a {[](PINOK && ltlRequestDeposit-> <>ltlDepositSuccessful)};
-//ltl p6b {[]((ltlRequestReimbursement || ltlRequestDeposit || ltlRequestWithdraw|| ltlRequestViewBalance) -> <>(ltlRequestReimbursement || ltlRequestDeposit || ltlRequestWithdraw|| ltlRequestViewBalance || ltlPrintReceipt))}; 
-ltl p6c {[](ltlDepositSuccessful && <>ltlRequestReimbursement -> <>ltlCanceledDeposit)};
+//ltl p6a {[](PINOK && ltlRequestDeposit-> <>ltlDepositSuccessful)}; // liveness
+//ltl p6b {[]((ltlRequestReimbursement || ltlRequestDeposit || ltlRequestWithdraw|| ltlRequestViewBalance) -> <>(ltlRequestReimbursement || ltlRequestDeposit || ltlRequestWithdraw|| ltlRequestViewBalance || ltlPrintReceipt))}; // safety
+//ltl p6c {[](ltlDepositSuccessful && <>ltlRequestReimbursement -> <>ltlCanceledDeposit)}; // liveness
 
