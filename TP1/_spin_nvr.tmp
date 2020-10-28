@@ -1,7 +1,11 @@
-never p5c {    /* !(<> (withdrawTransactionOK)) */
-accept_init:
+never p6b {    /* !([] ((! ((((ltlRequestReimbursement) || (ltlRequestDeposit)) || (ltlRequestWithdraw)) || (ltlRequestViewBalance))) || (<> (((((ltlRequestReimbursement) || (ltlRequestDeposit)) || (ltlRequestWithdraw)) || (ltlRequestViewBalance)) || (ltlPrintReceipt))))) */
 T0_init:
 	do
-	:: (! ((withdrawTransactionOK))) -> goto T0_init
+	:: (! ((! ((((ltlRequestReimbursement) || (ltlRequestDeposit)) || (ltlRequestWithdraw)) || (ltlRequestViewBalance)))) && ! ((((((ltlRequestReimbursement) || (ltlRequestDeposit)) || (ltlRequestWithdraw)) || (ltlRequestViewBalance)) || (ltlPrintReceipt)))) -> goto accept_S4
+	:: (1) -> goto T0_init
+	od;
+accept_S4:
+	do
+	:: (! ((((((ltlRequestReimbursement) || (ltlRequestDeposit)) || (ltlRequestWithdraw)) || (ltlRequestViewBalance)) || (ltlPrintReceipt)))) -> goto accept_S4
 	od;
 }

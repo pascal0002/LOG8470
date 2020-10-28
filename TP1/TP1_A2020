@@ -7,7 +7,6 @@ byte loginAttempts = 0;
 int accountBalance = 1250;
 int moneyToWithdraw = MAX_VALUE_INT;
 
-
 #define correctPin 100
 #define withdrawType 0
 #define depositType 1
@@ -16,15 +15,21 @@ int moneyToWithdraw = MAX_VALUE_INT;
 byte transactionType[MAX];
 int transactionAmount[MAX];
 byte transactionArrSize = 0;
-
-bool test = true;
-bool canDeposit = false;
-bool ltlRequestCancel = false;
+	
+bool ltlRequestReimbursement = false;
 bool ltlRequestDeposit = false;
+bool ltlRequestWithdraw = false;
+bool ltlRequestViewBalance = false;
+
+bool ltlWithdrawSuccessful = false;
 bool ltlDepositSuccessful = false;
+bool ltlCancelSuccessful = false;
+bool ltlViewBalanceSuccessful = false;
+
 bool ltlPrintReceipt = false;
 bool ltlEjectCard = false;
 bool ltlCanceledDeposit = false;
+
 bool PINOK = false;
 bool cardLock = false;
 bool withdrawTransactionOK = false;
@@ -40,7 +45,7 @@ Request_Logon:
 
 if
 
-  ::atomic{cashDispenser_client?eval(cardNum),requestLogon,PINvalid,0->canDeposit=true;PINOK=true;printf("Right PIN entered\n");}
+  ::atomic{cashDispenser_client?eval(cardNum),requestLogon,PINvalid,0->PINOK=true;printf("Right PIN entered\n");}
 
   ::atomic{cashDispenser_client?eval(cardNum),requestLogon,PINinvalid,0->PINOK=false;
    printf("You entered an invalid PIN\n");
@@ -61,13 +66,13 @@ int depositAmount;
 Wait_For_Response:
 
 if
-::atomic{cashDispenser_client?cardNum,requestWithdrawal,transactionOk,withdrawAmount->printf("Transaction OK\n"); ltlCanceledDeposit = true;}
+::atomic{cashDispenser_client?cardNum,requestWithdrawal,transactionOk,withdrawAmount->printf("Transaction OK\n"); moneyToWithdraw = MAX_VALUE_INT; ltlWithdrawSuccessful = true;ltlCanceledDeposit = true;}
 
-::atomic{cashDispenser_client?cardNum,requestWithdrawal,transactionError,withdrawAmount->printf("Transaction error\n");ltlCanceledDeposit = true;}
+::atomic{cashDispenser_client?cardNum,requestWithdrawal,transactionError,withdrawAmount->printf("Transaction error\n");ltlCanceledDeposit = false; ltlWithdrawSuccessful = false;}
 
-::atomic{cashDispenser_client?cardNum,requestWithdrawal,transactionUnsuccessful,withdrawAmount->printf("Transaction unsucessful\n");ltlCanceledDeposit = true;}
+::atomic{cashDispenser_client?cardNum,requestWithdrawal,transactionUnsuccessful,withdrawAmount->printf("Transaction unsucessful\n");ltlCanceledDeposit = false; ltlWithdrawSuccessful = false;}
 
-::atomic{cashDispenser_client?cardNum,requestBalance, transactionOk, accountBalanceInfo->printf("Account Balance: %d $\n", accountBalanceInfo);}
+::atomic{cashDispenser_client?cardNum,requestBalance, transactionOk, accountBalanceInfo->printf("Account Balance: %d $\n", accountBalanceInfo);ltlViewBalanceSuccessful = true;}
 
 ::atomic{cashDispenser_client?cardNum,makeDeposit, transactionOk, depositAmount->printf("Deposited %d $ to the account\n", depositAmount); ltlDepositSuccessful = true;}
 
@@ -90,9 +95,18 @@ if
 	transactionArrSize = 0;
 	
 	// Reset values
+	ltlRequestReimbursement = false;
+	ltlRequestDeposit = false;
+	ltlRequestWithdraw = false;
+	ltlRequestViewBalance=false;
+
+	ltlWithdrawSuccessful = false
+	ltlCanceledDeposit = false;
+	ltlDepositSuccessful = false;
+	ltlViewBalanceSuccessful = false;
 	PINOK= false;
 	moneyToWithdraw = MAX_VALUE_INT;
-	canDeposit = false;
+	
 	withdrawTransactionOK = false;
 	ltlPrintReceipt = false;
 	ltlEjectCard = false;
@@ -102,8 +116,19 @@ if
 
 fi;
 // resetValues
-	ltlCanceledDeposit = false;
-	ltlDepositSuccessful = false;
+
+ltlRequestReimbursement = false;
+ltlRequestDeposit = false;
+ltlRequestWithdraw = false;
+ltlRequestViewBalance=false;
+
+moneyToWithdraw = MAX_VALUE_INT;
+ltlWithdrawSuccessful = false
+ltlCanceledDeposit = false;
+ltlDepositSuccessful = false;
+ltlViewBalanceSuccessful = false;
+ltlPrintReceipt = false;
+
 goto Wait_For_Response; 
 
 CardLocked: // Just exit
@@ -142,9 +167,9 @@ Handle_Request:
 
 // Forward the message to the atmNetwork
 if
-	:: atomic{client_cashDispenser?cardNum,requestWithdrawal, 0, withdrawAmount->cashDispenser_atmNetwork!cardNum,requestWithdrawal, 0, withdrawAmount}; 
+	:: atomic{client_cashDispenser?cardNum,requestWithdrawal, 0, withdrawAmount->ltlRequestWithdraw = true; cashDispenser_atmNetwork!cardNum,requestWithdrawal, 0, withdrawAmount}; 
 
-	:: atomic{client_cashDispenser?cardNum,requestBalance,0, 0->cashDispenser_atmNetwork!cardNum,requestBalance,0, 0}; 
+	:: atomic{client_cashDispenser?cardNum,requestBalance,0, 0->cashDispenser_atmNetwork!cardNum,requestBalance,0, 0; ltlRequestViewBalance=true;}; 
 
 	:: atomic{client_cashDispenser?cardNum,makeDeposit, 0, depositAmount->cashDispenser_atmNetwork!cardNum,makeDeposit, 0, depositAmount; ltlRequestDeposit = true;};
 	
@@ -157,7 +182,7 @@ fi;
 
 //  Forward the response to the client
 if
-	::atomic{atmNetwork_cashDispenser?cardNum,requestWithdrawal, transactionOk,withdrawAmount->cashDispenser_client!cardNum,requestWithdrawal,transactionOk,withdrawAmount; ltlCanceledDeposit = false;}
+	::atomic{atmNetwork_cashDispenser?cardNum,requestWithdrawal, transactionOk,withdrawAmount->cashDispenser_client!cardNum,requestWithdrawal,transactionOk,withdrawAmount;}
 
 	::atomic{atmNetwork_cashDispenser?cardNum,requestWithdrawal,transactionError,withdrawAmount->cashDispenser_client!cardNum,requestWithdrawal,transactionError,withdrawAmount;ltlCanceledDeposit = false;}
 
@@ -165,7 +190,7 @@ if
 
 	::atomic{atmNetwork_cashDispenser?cardNum,requestBalance,transactionOk,accountBalanceInfo->cashDispenser_client!cardNum,requestBalance,transactionOk,accountBalanceInfo;}
 
-	::atomic{atmNetwork_cashDispenser?cardNum,makeDeposit, transactionOk, depositAmount->cashDispenser_client!cardNum,makeDeposit, transactionOk, depositAmount;ltlRequestDeposit = false;}
+	::atomic{atmNetwork_cashDispenser?cardNum,makeDeposit, transactionOk, depositAmount->cashDispenser_client!cardNum,makeDeposit, transactionOk, depositAmount;}
 	
 	:: atomic{atmNetwork_cashDispenser?cardNum,ejectCard, 0, 0->cashDispenser_client!cardNum,ejectCard, 0, 0; goto start};
 
@@ -251,7 +276,7 @@ server_start:
 atomic{atmNetwork_hostAtmServer?eval(cardNum),verifyPIN,0,PIN};
 
 if
-::(PIN == correctPin)->hostAtmServer_atmNetwork!cardNum,verifyPIN,PINvalid, 0->canDeposit=true;PINOK=true;goto Handle_Request;
+::(PIN == correctPin)->hostAtmServer_atmNetwork!cardNum,verifyPIN,PINvalid, 0->PINOK=true;goto Handle_Request;
 ::else->hostAtmServer_atmNetwork!cardNum,verifyPIN,PINinvalid, 0->PINOK=false;goto server_start;
 fi;
 
@@ -356,7 +381,7 @@ init {
 	/*
 	// Authentificate user
 	client_cashDispenser!cardNum, requestLogon, 0, 12;
-	client_cashDispenser!cardNum, requestLogon, 0, 13; 
+	//client_cashDispenser!cardNum, requestLogon, 0, 13; 
 	client_cashDispenser!cardNum, requestLogon, 0, 13; 
 
 	client_cashDispenser!cardNum, requestLogon, 0, 100; 
@@ -379,13 +404,18 @@ init {
 	client_cashDispenser!cardNum,requestBalance, 0, 0;
 
 	// Eject card
-	client_cashDispenser!cardNum,ejectCard, 0, 0;*/
-
+	client_cashDispenser!cardNum,ejectCard, 0, 0;
+	
 
 
 	
 	// Re authenticate user
-	atomic{client_cashDispenser!cardNum, requestLogon, 0, 100; }
+	client_cashDispenser!cardNum, requestLogon, 0, 100; 
+	
+	moneyToWithdraw = 100;
+	client_cashDispenser!cardNum,requestWithdrawal, 0, moneyToWithdraw; 
+	
+
 	client_cashDispenser!cardNum, makeDeposit, 0,1000;
 	client_cashDispenser!cardNum,ejectCard, 0, 0;
 	
@@ -402,26 +432,34 @@ init {
 	client_cashDispenser!cardNum,requestBalance, 0, 0;      
 	
 	// eject card
-	//client_cashDispenser!cardNum,ejectCard, 0, 0;
+	//client_cashDispenser!cardNum,ejectCard, 0, 0;*/
+
+	client_cashDispenser!cardNum, requestLogon, 0, 100; 
+	
+	moneyToWithdraw = 100;
+	client_cashDispenser!cardNum,requestWithdrawal, 0, moneyToWithdraw; 
+
             
 
             run client(cashDispenser_client, client_cashDispenser);
             run cashDispenser(client_cashDispenser, cashDispenser_atmNetwork, atmNetwork_cashDispenser, cashDispenser_client);
             run atmNetwork(cashDispenser_atmNetwork, atmNetwork_hostAtmServer, hostAtmServer_atmNetwork, atmNetwork_cashDispenser);
             run hostAtmServer(atmNetwork_hostAtmServer, hostAtmServer_atmNetwork);
-
 	
-
 }
  /* specification de propriétés */
 
 // 5
-//ltl p5a {[](loginAttempts > 3 -> cardLock)}; //safety
-//ltl p5b {!withdrawTransactionOK U (PINOK && (moneyToWithdraw < accountBalance))}; //liveness
+//ltl p5a {[](loginAttempts > 3 -> <>cardLock)}; //safety
+
+//ltl p5b {[](PINOK && (moneyToWithdraw < accountBalance) -> <>ltlWithdrawSuccessful)}; //liveness fonctionne
+//ltl p5b {[](!ltlWithdrawSuccessful U (PINOK && (moneyToWithdraw < accountBalance)))}; //liveness
+
 //ltl p5c {<>withdrawTransactionOK}; //liveness - pas realisable pour notre sys. (ex: 3 loginattemps echoue)
 
 // 6
-ltl p6a {[](PINOK && ltlRequestDeposit-> <>ltlDepositSuccessful)};
+//ltl p6a {[](PINOK && ltlRequestDeposit-> <>ltlDepositSuccessful)};
 //ltl p6b {[](!ltlPrintReceipt U ltlEjectCard)};
-//ltl p6c {[](ltlDepositSuccessful && <>ltlRequestCancel -> <>ltlCanceledDeposit)};
+ltl p6b {[]((ltlRequestReimbursement || ltlRequestDeposit || ltlRequestWithdraw|| ltlRequestViewBalance) -> <>(ltlRequestReimbursement || ltlRequestDeposit || ltlRequestWithdraw|| ltlRequestViewBalance || ltlPrintReceipt))}; 
+//ltl p6c {[](ltlDepositSuccessful && <>ltlRequestReimbursementltlRequestCancel -> <>ltlCanceledDeposit)};
 
