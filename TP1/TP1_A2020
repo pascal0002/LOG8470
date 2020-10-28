@@ -460,6 +460,8 @@ init {
 // 6
 //ltl p6a {[](PINOK && ltlRequestDeposit-> <>ltlDepositSuccessful)};
 //ltl p6b {[](!ltlPrintReceipt U ltlEjectCard)};
+
+// Good one
 ltl p6b {[]((ltlRequestReimbursement || ltlRequestDeposit || ltlRequestWithdraw|| ltlRequestViewBalance) -> <>(ltlRequestReimbursement || ltlRequestDeposit || ltlRequestWithdraw|| ltlRequestViewBalance || ltlPrintReceipt))}; 
-//ltl p6c {[](ltlDepositSuccessful && <>ltlRequestReimbursementltlRequestCancel -> <>ltlCanceledDeposit)};
+//ltl p6c {[](ltlDepositSuccessful && <>ltlRequestReimbursement -> <>ltlCanceledDeposit)};
 
