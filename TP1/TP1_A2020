@@ -11,15 +11,6 @@ int moneyToWithdraw = MAX_VALUE_INT;
 #define withdrawType 0
 #define depositType 1
 #define reimbursementType 2
-#define chequeType 3
-
-typedef Cheque {
-        int id;
-        int year;
-        byte month;
-        byte day;
-        int amount;
-};
 
 byte transactionType[MAX];
 int transactionAmount[MAX];
@@ -44,11 +35,11 @@ bool cardLock = false;
 bool withdrawTransactionOK = false;
 
 mtype = {transactionOk, transactionError, transactionUnsuccessful, PINvalid, PINinvalid, verifyPIN,
-	requestWithdrawal, requestBalance, requestLogon, cardLocked, makeDeposit, ejectCard, cancelDeposit, depositCheque};
+	requestWithdrawal, requestBalance, requestLogon, cardLocked, makeDeposit, ejectCard, cancelDeposit};
 
 
 
-proctype client(chan cashDispenser_client; chan client_cashDispenser; chan cheque_cashDispenser_client; chan cheque_client_cashDispenser) {
+proctype client(chan cashDispenser_client; chan client_cashDispenser) {
 
 Request_Logon:
 
@@ -71,7 +62,6 @@ fi;
 int withdrawAmount;
 int accountBalanceInfo;
 int depositAmount;
-Cheque cheque1;
 
 Wait_For_Response:
 
@@ -86,8 +76,6 @@ if
 
 ::atomic{cashDispenser_client?cardNum,makeDeposit, transactionOk, depositAmount->printf("Deposited %d $ to the account\n", depositAmount); ltlDepositSuccessful = true;}
 
-::atomic{cheque_cashDispenser_client?cardNum,depositCheque, transactionOk, cheque1->printf("Cheque deposited successfully, %d $ where added to the account\n", cheque1.amount);}
-
 ::atomic{cashDispenser_client?cardNum,ejectCard, 0, 0->
 		
 	printf("Card ejected\n");
@@ -97,7 +85,6 @@ if
 	for (i: 0 .. transactionArrSize-1) {
 		if
 		::(transactionType[i] == depositType)->printf("	Deposit: %d$\n",  transactionAmount[i]); 
-		::(transactionType[i] == chequeType)->printf("	Cheque deposited for: %d$\n",  transactionAmount[i]); 
 		::(transactionType[i] == withdrawType)->printf("	Withdraw: %d$\n",  transactionAmount[i]); 
 		::(transactionType[i] == reimbursementType)->printf("	Reimbursement: %d$\n",  transactionAmount[i]); 
 		::else->skip;
@@ -151,7 +138,7 @@ CardLocked: // Just exit
 
 
 
-proctype cashDispenser(chan client_cashDispenser; chan cashDispenser_atmNetwork; chan atmNetwork_cashDispenser; chan cashDispenser_client; chan cheque_client_cashDispenser; chan cheque_cashDispenser_atmNetwork; chan cheque_atmNetwork_cashDispenser; chan cheque_cashDispenser_client) {
+proctype cashDispenser(chan client_cashDispenser; chan cashDispenser_atmNetwork; chan atmNetwork_cashDispenser; chan cashDispenser_client) {
 	
 int PIN;
 
@@ -175,7 +162,6 @@ fi;
 int withdrawAmount;
 int accountBalanceInfo;
 int depositAmount;
-Cheque cheque1;
 
 Handle_Request: 
 
@@ -186,8 +172,6 @@ if
 	:: atomic{client_cashDispenser?cardNum,requestBalance,0, 0->cashDispenser_atmNetwork!cardNum,requestBalance,0, 0; ltlRequestViewBalance=true;}; 
 
 	:: atomic{client_cashDispenser?cardNum,makeDeposit, 0, depositAmount->cashDispenser_atmNetwork!cardNum,makeDeposit, 0, depositAmount; ltlRequestDeposit = true;};
-	
-	:: atomic{cheque_client_cashDispenser?cardNum,depositCheque, 0, cheque1->cashDispenser_atmNetwork!cardNum,depositCheque, 0, cheque1;};
 	
 	:: atomic{client_cashDispenser?cardNum,cancelDeposit, 0, 0->cashDispenser_atmNetwork!cardNum,cancelDeposit, 0, 0; ltlCanceledDeposit = true;};
 
@@ -208,8 +192,6 @@ if
 
 	::atomic{atmNetwork_cashDispenser?cardNum,makeDeposit, transactionOk, depositAmount->cashDispenser_client!cardNum,makeDeposit, transactionOk, depositAmount;}
 	
-	::atomic{cheque_atmNetwork_cashDispenser?cardNum,depositCheque, transactionOk, cheque1->cashDispenser_client!cardNum,depositCheque, transactionOk, cheque1;}
-	
 	:: atomic{atmNetwork_cashDispenser?cardNum,ejectCard, 0, 0->cashDispenser_client!cardNum,ejectCard, 0, 0; goto start};
 
 fi;
@@ -220,7 +202,7 @@ goto Handle_Request;
 
 
 
-proctype atmNetwork(chan cashDispenser_atmNetwork; chan atmNetwork_hostAtmServer; chan hostAtmServer_atmNetwork; chan atmNetwork_cashDispenser; chan cheque_cashDispenser_atmNetwork; chan cheque_atmNetwork_hostAtmServer; chan cheque_hostAtmServer_atmNetwork; chan cheque_atmNetwork_cashDispenser) {
+proctype atmNetwork(chan cashDispenser_atmNetwork; chan atmNetwork_hostAtmServer; chan hostAtmServer_atmNetwork; chan atmNetwork_cashDispenser) {
 
 int PIN;
 Check_Bank_Details:
@@ -246,7 +228,6 @@ fi;
 int withdrawAmount;
 int accountBalanceInfo;
 int depositAmount;
-Cheque cheque1;
 
 Handle_Request: 
 
@@ -257,8 +238,6 @@ if
 	:: atomic{cashDispenser_atmNetwork?cardNum,requestBalance,0, 0->atmNetwork_hostAtmServer!cardNum,requestBalance,0, 0}; 
 
 	:: atomic{cashDispenser_atmNetwork?cardNum,makeDeposit, 0, depositAmount->atmNetwork_hostAtmServer!cardNum,makeDeposit, 0, depositAmount};
-	
-	:: atomic{cheque_cashDispenser_atmNetwork?cardNum,depositCheque, 0, cheque1->atmNetwork_hostAtmServer!cardNum,depositCheque, 0, cheque1};
 	
 	:: atomic{cashDispenser_atmNetwork?cardNum,cancelDeposit, 0, 0->atmNetwork_hostAtmServer!cardNum,cancelDeposit, 0, 0};
 	
@@ -277,8 +256,6 @@ if
 	::atomic{hostAtmServer_atmNetwork?cardNum,requestBalance,transactionOk,accountBalanceInfo->atmNetwork_cashDispenser!cardNum,requestBalance,transactionOk,accountBalanceInfo;}
 
 	::atomic{hostAtmServer_atmNetwork?cardNum,makeDeposit, transactionOk,depositAmount->atmNetwork_cashDispenser!cardNum,makeDeposit, transactionOk,depositAmount;}
-	
-	::atomic{cheque_hostAtmServer_atmNetwork?cardNum,depositCheque, transactionOk,cheque1->atmNetwork_cashDispenser!cardNum,depositCheque, transactionOk,cheque1;}
 
 	:: atomic{hostAtmServer_atmNetwork?cardNum,ejectCard, 0, 0->atmNetwork_cashDispenser!cardNum,ejectCard, 0, 0; goto Check_Bank_Details};
 
@@ -290,7 +267,7 @@ goto Handle_Request;
 
 
 
-proctype hostAtmServer(chan atmNetwork_hostAtmServer; chan hostAtmServer_atmNetwork; chan cheque_atmNetwork_hostAtmServer; chan cheque_hostAtmServer_atmNetwork) {
+proctype hostAtmServer(chan atmNetwork_hostAtmServer; chan hostAtmServer_atmNetwork) {
 
 int PIN;
 server_start:
@@ -305,7 +282,6 @@ fi;
 
 int withdrawAmount;
 int depositAmount;
-Cheque cheque1;
 
 
 Handle_Request:
@@ -376,18 +352,6 @@ if
 			::atomic{(depositAmount>accountBalance)->hostAtmServer_atmNetwork!cardNum,requestWithdrawal,transactionUnsuccessful,depositAmount->withdrawTransactionOK=false;goto Handle_Request;}
 
 		fi;}
-		
-		:: atomic{cheque_atmNetwork_hostAtmServer?cardNum,depositCheque, 0, cheque1->
-		
-		accountBalance = accountBalance + cheque1.amount;
-		cheque_hostAtmServer_atmNetwork!cardNum,depositCheque, transactionOk, cheque1.amount;
-		
-		// Save transaction for receipt
-		transactionType[transactionArrSize] = chequeType;
-		transactionAmount[transactionArrSize] = cheque1.amount;
-		transactionArrSize = transactionArrSize + 1;
-
-		goto Handle_Request};
 
 	:: atomic{atmNetwork_hostAtmServer?cardNum,ejectCard, 0, 0->
 		
@@ -413,25 +377,14 @@ init {
             chan atmNetwork_hostAtmServer=[MAX] of {int,mtype,mtype,int}; 
 
             chan hostAtmServer_atmNetwork=[MAX] of {int,mtype,mtype,int}; 
-
-            chan cheque_cashDispenser_client=[MAX] of {int,mtype,mtype,Cheque}; 
-
-             chan cheque_client_cashDispenser=[MAX] of {int,mtype,mtype,Cheque}; 
-
-            chan cheque_cashDispenser_atmNetwork=[MAX] of {int,mtype,mtype,Cheque}; 
-
-            chan cheque_atmNetwork_cashDispenser=[MAX] of {int,mtype,mtype,Cheque}; 
-
-            chan cheque_atmNetwork_hostAtmServer=[MAX] of {int,mtype,mtype,Cheque}; 
-
-            chan cheque_hostAtmServer_atmNetwork=[MAX] of {int,mtype,mtype,Cheque}; 
 	
 	
 	// Authentificate user
+	// Wrong PIN
 	client_cashDispenser!cardNum, requestLogon, 0, 12;
-	//client_cashDispenser!cardNum, requestLogon, 0, 13; 
 	client_cashDispenser!cardNum, requestLogon, 0, 13; 
-
+	
+	// Right PIN
 	client_cashDispenser!cardNum, requestLogon, 0, 100; 
 	
 	// Withdraw
@@ -451,63 +404,32 @@ init {
 	client_cashDispenser!cardNum,requestBalance, 0, 0;
 	client_cashDispenser!cardNum,requestBalance, 0, 0;
 
+
+	// Reimbursement of last deposit
+	client_cashDispenser!cardNum,cancelDeposit, 0, 0;   
+
+	client_cashDispenser!cardNum,makeDeposit, 0, 1400;
+	client_cashDispenser!cardNum,cancelDeposit, 0, 0;   
+
 	// Eject card
 	client_cashDispenser!cardNum,ejectCard, 0, 0;
 	
 
+/*
+	// Pour prouver que la propriété 5 c) est fausse
+	// Wrong PIN entered more than 3 times - card locked
+	client_cashDispenser!cardNum, requestLogon, 0, 12;
+	client_cashDispenser!cardNum, requestLogon, 0, 13; 
+	client_cashDispenser!cardNum, requestLogon, 0, 12;
+	client_cashDispenser!cardNum, requestLogon, 0, 13; 
+*/
+	
+	
 
-	
-	// Re authenticate user
-	client_cashDispenser!cardNum, requestLogon, 0, 100; 
-	
-	moneyToWithdraw = 100;
-	client_cashDispenser!cardNum,requestWithdrawal, 0, moneyToWithdraw; 
-	
-
-	client_cashDispenser!cardNum, makeDeposit, 0,1000;
-	client_cashDispenser!cardNum,ejectCard, 0, 0;
-	
-	
-	 // Deposit
-	client_cashDispenser!cardNum,makeDeposit, 0, 20;
-
-	client_cashDispenser!cardNum,makeDeposit, 0, 40;
-
-	// Reimbursement 
-                client_cashDispenser!cardNum,cancelDeposit, 0, 0;   
-
-	// Check balance
-	client_cashDispenser!cardNum,requestBalance, 0, 0;      
-	
-	// eject card
-	//client_cashDispenser!cardNum,ejectCard, 0, 0;*/
-
-	client_cashDispenser!cardNum, requestLogon, 0, 100; 
-	
-	moneyToWithdraw = 100;
-	client_cashDispenser!cardNum,requestWithdrawal, 0, moneyToWithdraw; 
-
-            
-	// scan cheque		
-	
-	client_cashDispenser!cardNum, requestLogon, 0, 100; 
-	
-	Cheque cheque1;
-		cheque1.id = 1246789;
-        cheque1.year = 2020;
-        cheque1.month = 10;
-        cheque1.day = 20;
-        cheque1.amount = 200;
-	cheque_client_cashDispenser!cardNum, depositCheque, 0,cheque1;
-	
-	client_cashDispenser!cardNum,requestBalance, 0, 0;
-	client_cashDispenser!cardNum,ejectCard, 0, 0;
-
-
-            run client(cashDispenser_client, client_cashDispenser,cheque_cashDispenser_client, cheque_client_cashDispenser);
-            run cashDispenser(client_cashDispenser, cashDispenser_atmNetwork, atmNetwork_cashDispenser, cashDispenser_client,cheque_client_cashDispenser, cheque_cashDispenser_atmNetwork, cheque_atmNetwork_cashDispenser, cheque_cashDispenser_client);
-            run atmNetwork(cashDispenser_atmNetwork, atmNetwork_hostAtmServer, hostAtmServer_atmNetwork, atmNetwork_cashDispenser,cheque_cashDispenser_atmNetwork, cheque_atmNetwork_hostAtmServer, cheque_hostAtmServer_atmNetwork, cheque_atmNetwork_cashDispenser);
-            run hostAtmServer(atmNetwork_hostAtmServer, hostAtmServer_atmNetwork,cheque_atmNetwork_hostAtmServer, cheque_hostAtmServer_atmNetwork);
+            run client(cashDispenser_client, client_cashDispenser);
+            run cashDispenser(client_cashDispenser, cashDispenser_atmNetwork, atmNetwork_cashDispenser, cashDispenser_client);
+            run atmNetwork(cashDispenser_atmNetwork, atmNetwork_hostAtmServer, hostAtmServer_atmNetwork, atmNetwork_cashDispenser);
+            run hostAtmServer(atmNetwork_hostAtmServer, hostAtmServer_atmNetwork);
 	
 }
  /* specification de propriétés */
@@ -516,15 +438,12 @@ init {
 //ltl p5a {[](loginAttempts > 3 -> <>cardLock)}; //safety
 
 //ltl p5b {[](PINOK && (moneyToWithdraw < accountBalance) -> <>ltlWithdrawSuccessful)}; //liveness fonctionne
-//ltl p5b {[](!ltlWithdrawSuccessful U (PINOK && (moneyToWithdraw < accountBalance)))}; //liveness
+//ltl p5b {[](!ltlWithdrawSuccessful U (PINOK && (moneyToWithdraw < accountBalance)))}; //liveness garder pour l'analyse
 
-//ltl p5c {<>withdrawTransactionOK}; //liveness - pas realisable pour notre sys. (ex: 3 loginattemps echoue)
+ltl p5c {<>withdrawTransactionOK}; //liveness - pas realisable pour notre sys. (ex: 3 loginattemps echoue)
 
 // 6
 //ltl p6a {[](PINOK && ltlRequestDeposit-> <>ltlDepositSuccessful)};
-//ltl p6b {[](!ltlPrintReceipt U ltlEjectCard)};
-
-// Good one
-ltl p6b {[]((ltlRequestReimbursement || ltlRequestDeposit || ltlRequestWithdraw|| ltlRequestViewBalance) -> <>(ltlRequestReimbursement || ltlRequestDeposit || ltlRequestWithdraw|| ltlRequestViewBalance || ltlPrintReceipt))}; 
+//ltl p6b {[]((ltlRequestReimbursement || ltlRequestDeposit || ltlRequestWithdraw|| ltlRequestViewBalance) -> <>(ltlRequestReimbursement || ltlRequestDeposit || ltlRequestWithdraw|| ltlRequestViewBalance || ltlPrintReceipt))}; 
 //ltl p6c {[](ltlDepositSuccessful && <>ltlRequestReimbursement -> <>ltlCanceledDeposit)};
 
