@@ -403,7 +403,10 @@ init {
 
 	client_cashDispenser!cardNum,requestBalance, 0, 0;
 	client_cashDispenser!cardNum,requestBalance, 0, 0;
-
+	
+	// Withdraw too big
+	moneyToWithdraw = 10000;
+	client_cashDispenser!cardNum,requestWithdrawal, 0, moneyToWithdraw; 
 
 	// Reimbursement of last deposit
 	client_cashDispenser!cardNum,cancelDeposit, 0, 0;   
@@ -440,10 +443,10 @@ init {
 //ltl p5b {[](PINOK && (moneyToWithdraw < accountBalance) -> <>ltlWithdrawSuccessful)}; //liveness fonctionne
 //ltl p5b {[](!ltlWithdrawSuccessful U (PINOK && (moneyToWithdraw < accountBalance)))}; //liveness garder pour l'analyse
 
-ltl p5c {<>withdrawTransactionOK}; //liveness - pas realisable pour notre sys. (ex: 3 loginattemps echoue)
+//ltl p5c {<>withdrawTransactionOK}; //liveness - pas realisable pour notre sys. (ex: 3 loginattemps echoue)
 
 // 6
 //ltl p6a {[](PINOK && ltlRequestDeposit-> <>ltlDepositSuccessful)};
 //ltl p6b {[]((ltlRequestReimbursement || ltlRequestDeposit || ltlRequestWithdraw|| ltlRequestViewBalance) -> <>(ltlRequestReimbursement || ltlRequestDeposit || ltlRequestWithdraw|| ltlRequestViewBalance || ltlPrintReceipt))}; 
-//ltl p6c {[](ltlDepositSuccessful && <>ltlRequestReimbursement -> <>ltlCanceledDeposit)};
+ltl p6c {[](ltlDepositSuccessful && <>ltlRequestReimbursement -> <>ltlCanceledDeposit)};
 
