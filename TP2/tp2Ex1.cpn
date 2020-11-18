@@ -977,11 +977,10 @@
                   filled="false"/>
         <lineattr colour="Black"
                   thick="1"
-                  type="Solid"/>
+                  type="solid"/>
         <textattr colour="Black"
                   bold="false"/>
-        <text>Debut pause
-</text>
+        <text>Debut pause</text>
         <box w="60.000000"
              h="40.000000"/>
         <binding x="7.200000"
@@ -1052,11 +1051,10 @@
                   filled="false"/>
         <lineattr colour="Black"
                   thick="1"
-                  type="Solid"/>
+                  type="solid"/>
         <textattr colour="Black"
                   bold="false"/>
-        <text>Fin pause
-</text>
+        <text>Fin pause</text>
         <box w="60.000000"
              h="40.000000"/>
         <binding x="7.200000"
@@ -1127,7 +1125,7 @@
                   filled="false"/>
         <lineattr colour="Black"
                   thick="1"
-                  type="Solid"/>
+                  type="solid"/>
         <textattr colour="Black"
                   bold="false"/>
         <text>Debut pause2</text>
@@ -1201,7 +1199,7 @@
                   filled="false"/>
         <lineattr colour="Black"
                   thick="1"
-                  type="Solid"/>
+                  type="solid"/>
         <textattr colour="Black"
                   bold="false"/>
         <text>Fin pause2</text>
@@ -1275,7 +1273,7 @@
                   filled="false"/>
         <lineattr colour="Black"
                   thick="1"
-                  type="Solid"/>
+                  type="solid"/>
         <textattr colour="Black"
                   bold="false"/>
         <text>Debut pause3</text>
@@ -1349,7 +1347,7 @@
                   filled="false"/>
         <lineattr colour="Black"
                   thick="1"
-                  type="Solid"/>
+                  type="solid"/>
         <textattr colour="Black"
                   bold="false"/>
         <text>Fin pause3</text>
@@ -1815,7 +1813,7 @@
                    currentcyckle="2"/>
         <transend idref="ID1412457827"/>
         <placeend idref="ID1412448659"/>
-        <annot id="ID1412461186">
+        <annot id="ID1412527316">
           <posattr x="94.000000"
                    y="25.000000"/>
           <fillattr colour="White"
@@ -1847,9 +1845,9 @@
                    currentcyckle="2"/>
         <transend idref="ID1412458809"/>
         <placeend idref="ID1412448659"/>
-        <annot id="ID1412462615">
-          <posattr x="99.000000"
-                   y="-32.000000"/>
+        <annot id="ID1412527317">
+          <posattr x="101.000000"
+                   y="-31.000000"/>
           <fillattr colour="White"
                     pattern="Solid"
                     filled="false"/>
@@ -2039,9 +2037,9 @@
                    currentcyckle="2"/>
         <transend idref="ID1412468011"/>
         <placeend idref="ID1412466350"/>
-        <annot id="ID1412471567">
-          <posattr x="106.000000"
-                   y="-200.000000"/>
+        <annot id="ID1412527318">
+          <posattr x="103.000000"
+                   y="-201.000000"/>
           <fillattr colour="White"
                     pattern="Solid"
                     filled="false"/>
@@ -2103,9 +2101,9 @@
                    currentcyckle="2"/>
         <transend idref="ID1412467334"/>
         <placeend idref="ID1412466350"/>
-        <annot id="ID1412472312">
-          <posattr x="94.000000"
-                   y="-152.000000"/>
+        <annot id="ID1412527319">
+          <posattr x="97.000000"
+                   y="-153.000000"/>
           <fillattr colour="White"
                     pattern="Solid"
                     filled="false"/>
@@ -2167,9 +2165,9 @@
                    currentcyckle="2"/>
         <transend idref="ID1412481261"/>
         <placeend idref="ID1412479945"/>
-        <annot id="ID1412485849">
-          <posattr x="94.000000"
-                   y="-336.000000"/>
+        <annot id="ID1412527320">
+          <posattr x="98.000000"
+                   y="-337.000000"/>
           <fillattr colour="White"
                     pattern="Solid"
                     filled="false"/>
@@ -2199,8 +2197,8 @@
                    currentcyckle="2"/>
         <transend idref="ID1412482154"/>
         <placeend idref="ID1412479945"/>
-        <annot id="ID1412486322">
-          <posattr x="105.000000"
+        <annot id="ID1412527321">
+          <posattr x="104.000000"
                    y="-396.000000"/>
           <fillattr colour="White"
                     pattern="Solid"
@@ -2573,8 +2571,8 @@
                  height="827">
         <sheets>
           <cpnsheet id="ID2215"
-                    panx="31.000000"
-                    pany="-199.000000"
+                    panx="71.000000"
+                    pany="-201.000000"
                     zoom="1.000000"
                     instance="ID2149">
             <zorder>
@@ -2658,13 +2656,13 @@
       <IndexNode expanded="true">
         <IndexNode expanded="false"/>
       </IndexNode>
-      <IndexNode expanded="false">
+      <IndexNode expanded="true">
         <IndexNode expanded="false">
           <IndexNode expanded="true"/>
           <IndexNode expanded="true"/>
           <IndexNode expanded="true"/>
         </IndexNode>
-        <IndexNode expanded="false">
+        <IndexNode expanded="true">
           <IndexNode expanded="true"/>
           <IndexNode expanded="true"/>
           <IndexNode expanded="true"/>
