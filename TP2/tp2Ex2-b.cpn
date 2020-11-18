@@ -926,8 +926,8 @@ orelse (i =0 andalso j = N - 1);</layout>
                  height="845">
         <sheets>
           <cpnsheet id="ID1412562781"
-                    panx="526.000000"
-                    pany="1148.000000"
+                    panx="501.000000"
+                    pany="1038.000000"
                     zoom="1.000000"
                     instance="ID1412562610">
             <zorder>
